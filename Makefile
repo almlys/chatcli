@@ -1,5 +1,5 @@
 CC=gcc
-CCFLAGS=-Wall -g -ansi
+CCFLAGS=-Wall -g
 BINS=cserver
 BINS2=server client
 CSERVER_OBJ=cserver.o
