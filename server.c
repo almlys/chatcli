@@ -14,19 +14,17 @@
 #include <sys/wait.h>
 #include <signal.h>
 
-#define MYPORT 8642	// the port users will be connecting to
+#define MYPORT 8642 // the port users will be connecting to
 
-#define BACKLOG 10	 // how many pending connections queue will hold
+#define BACKLOG 10 // how many pending connections queue will hold
 
 #define MAXDATASIZE 100 // max number of bytes we can get at once 
 
-void sigchld_handler(int s)
-{
+void sigchld_handler(int s) {
 	while(waitpid(-1, NULL, WNOHANG) > 0);
 }
 
-int main(void)
-{
+int main(void) {
 	int numbytes;  
 	char buf[MAXDATASIZE];
 
@@ -49,7 +47,7 @@ int main(void)
 	
 	my_addr.sin_family = AF_INET;		 // host byte order
 	my_addr.sin_port = htons(MYPORT);	 // short, network byte order
-	my_addr.sin_addr.s_addr = INADDR_ANY; // automatically fill with my IP
+	my_addr.sin_addr.s_addr = htonl(INADDR_ANY); // automatically fill with my IP
 	memset(&(my_addr.sin_zero), '\0', 8); // zero the rest of the struct
 
 	if (bind(sockfd, (struct sockaddr *)&my_addr, sizeof(struct sockaddr)) == -1) {

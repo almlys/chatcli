@@ -18,8 +18,7 @@
 
 #define AQ { printf("Estoy aquí: %s,%i,%s\n",__FILE__,__LINE__,__FUNCTION__); }
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
 	int sockfd, numbytes;  
 	char buf[MAXDATASIZE];
 	struct hostent *he;
@@ -60,18 +59,17 @@ int main(int argc, char *argv[])
 	int n,sn;
 	fd_set readfs;
 
-	while(keep_running) {
+	//STDIN = 0
+	FD_ZERO(&readfs); //Inicializar
+	FD_SET(0,&readfs); //Fijar la entrada estandar
+	FD_SET(sockfd,&readfs); //Fijar el socket
 
-		//STDIN = 0
-		FD_ZERO(&readfs); //Inicializar
-		FD_SET(0,&readfs); //Fijar la entrada estandar
-		FD_SET(sockfd,&readfs); //Fijar el socket
+	while(keep_running) {
 
 		if(select(sockfd+1,&readfs,NULL,NULL,NULL)==-1) {
 			perror("select");
 			exit(-1);
 		}
-
 
 		if(FD_ISSET(0,&readfs)) {
 			//Datos recibidos por la entrada estandar
