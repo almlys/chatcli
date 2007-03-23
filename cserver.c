@@ -34,6 +34,9 @@ fprintf(stderr, __VA_ARGS__); fflush(stderr); }
 
 #define MAXDATASIZE 100
 
+#define MAXCLIENTS 25
+#define MAXNAME 100
+
 //Data types
 typedef unsigned char Byte;
 typedef unsigned short int U16;
@@ -120,16 +123,21 @@ void install_handlers() {
 }
 
 /// Client structures
-/*struct sclient {
-	int sock; ///<! Client Socket
+struct sclient {
+	//int sock; ///<! Client Socket
 	// Address pair
-	sockaddr_in server ///<! Server address
-	sockaddr_in client ///<! Client address
-};*/
+	//struct sockaddr_in server ///<! Server address
+	struct sockaddr_in client ///<! Client address
+	char nom[MAXNAME+1];
+};
+
+//Registra l'adreça ip / socket
+void session_register(int sock,struct sockaddr_in * client, socklen_t * client_size) {
+	//
+}
 
 
-/// Process a client request
-
+/// Send a message to the client
 int mysend(int csock,char * msg) {
 	int size=strlen(msg);
 	int sn;
@@ -144,15 +152,29 @@ int mysend(int csock,char * msg) {
 	return 0;
 }
 
+/// Process a client request
 int proccess_request(int csock, char * buf, int n) {
 	printf("Processing request: %s\n",buf);
 
-	if(!strncmp(buf,"HELO\n",5)) {
+	struct sockaddr_in client;
+	socklen_t client_size=sizeof(struct sockaddr);
+
+	/*//Get client address
+	if(getsockname(csock,(struct sockaddr *)&client,&client_size) == -1) {
+		perror("getsockname");
+		return -1;
+	}
+
+	DBG(1,"Got Connection from %s:%i\n",
+		inet_ntoa(client.sin_addr),ntohs(client.sin_port));
+	*/
+
+	if(!strncmp(buf,"HOLA\n",5)) {
 		//HELO message
 		//enviar OK
-		mysend(csock,"200 OK\n");
+		mysend(csock,"100 OK \n");
 	} else {
-		mysend(csock,"400 ERROR\n");
+		mysend(csock,"200 ERROR\n");
 	}
 
 	return 0;
@@ -162,6 +184,10 @@ int proccess_request(int csock, char * buf, int n) {
 /// @param config Address of the configuration struct
 /// @returns 0 if everything went well, non-zero on error
 int server_loop(struct mconfig * config) {
+
+	struct sclient clients[MAXCLIENTS];
+	memset(&clients,0,sizeof(clients));
+
 	//Startup
 	//Create the socket (TCP)
 	int sock;

@@ -13,7 +13,7 @@ BUILD=${CC} ${CCFLAGS}
 %.o: %.c
 	${BUILD} -c $<
 
-all: ${BINS2}
+all: ${BINS2} ${BINS}
 
 client: ${CLIENT_OBJ}
 	${BUILD} -o client ${CLIENT_OBJ}
