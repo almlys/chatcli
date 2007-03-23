@@ -1,3 +1,4 @@
 #!/usr/bin/env python
-# Id: $Id$
-
+# -*- coding: utf-8 -*-
+#
+# $Id$
