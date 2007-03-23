@@ -108,11 +108,6 @@ void s_handler(int s) {
 			__state_running=0;
 			signal(s,s_handler);
 			break;
-/* NOT USED IN THIS VERSION
-		case SIGCHLD:
-			while(waitpid(-1,NULL,WNOHANG) > 0);
-			signal(s,s_handler);
-			break;*/
 		default:
 			DBG(1,"Error: Unexpected signal recieved!\n");
 	}
@@ -122,7 +117,6 @@ void s_handler(int s) {
 void install_handlers() {
 	signal(SIGTERM, s_handler);
 	signal(SIGINT, s_handler);
-	//NOT USED signal(SIGCHLD, s_handler);
 }
 
 /// Client structures
@@ -132,6 +126,37 @@ void install_handlers() {
 	sockaddr_in server ///<! Server address
 	sockaddr_in client ///<! Client address
 };*/
+
+
+/// Process a client request
+
+int mysend(int csock,char * msg) {
+	int size=strlen(msg);
+	int sn;
+	sn=send(csock,(const void *)msg,size,0);
+	if(sn==-1) {
+		perror("send\n");
+		return -1;
+	} else if(sn!=size) {
+		fprintf(stderr,"Error, no se enviaron todos los datos?\n");
+		return -1;
+	}
+	return 0;
+}
+
+int proccess_request(int csock, char * buf, int n) {
+	printf("Processing request: %s\n",buf);
+
+	if(!strncmp(buf,"HELO\n",5)) {
+		//HELO message
+		//enviar OK
+		mysend(csock,"200 OK\n");
+	} else {
+		mysend(csock,"400 ERROR\n");
+	}
+
+	return 0;
+}
 
 /// Server Loop
 /// @param config Address of the configuration struct
@@ -175,7 +200,7 @@ int server_loop(struct mconfig * config) {
 	char buf[MAXDATASIZE+1];
 	fd_set readfs;
 	fd_set master;
-	int fdmax, csock, numbytes, sn;
+	int fdmax, csock, numbytes; //, sn;
 	int i,e,found;
 	struct sockaddr_in client;
 	socklen_t client_size=sizeof(struct sockaddr);
@@ -217,34 +242,6 @@ int server_loop(struct mconfig * config) {
 						continue;
 					}
 					printf("server: got connection from %s , %d\n",inet_ntoa(client.sin_addr),csock);
-
-					//Broadcast to all clients
-					for(i=3; i<=fdmax; i++) {
-						//printf("checking i:%i, found:%i, sockfd:%i, FD_ISSET(i):%i\n",i,found,sock,FD_ISSET(i,&master));
-						if(i!=found && i!=sock && FD_ISSET(i,&master)) {
-							//printf("enviant dades a %i fdmax:%i\n",i,fdmax);
-							snprintf(buf,MAXDATASIZE,"server: got connection from %s , %d\n",inet_ntoa(client.sin_addr),csock);
-							numbytes=strlen(buf);
-							sn=send(i,(const void *)buf,numbytes,0);
-							if(sn==-1) {
-								perror("send\n");
-								continue;
-							} else if(sn!=numbytes) {
-								fprintf(stderr,"Error, no se enviaron todos los datos?\n");
-								continue;
-							}
-						}
-					}
-					sprintf(buf,"Welcome %s\n",inet_ntoa(client.sin_addr));
-					numbytes=strlen(buf);
-					sn=send(csock,(const void *)buf,numbytes,0);
-					if(sn==-1) {
-						perror("send\n");
-						continue;
-					} else if(sn!=numbytes) {
-						fprintf(stderr,"Error, no se enviaron todos los datos?\n");
-						continue;
-					}
 	
 					FD_SET(csock,&master);
 					fdmax=csock>fdmax ? csock : fdmax;
@@ -272,23 +269,8 @@ int server_loop(struct mconfig * config) {
 						}
 					}
 					buf[numbytes] = '\0';
-					//printf("Received: %s",buf);
-	
-					//Broadcast to all clients
-					for(i=0; i<=fdmax; i++) {
-						//printf("checking i:%i, found:%i, sockfd:%i, FD_ISSET(i):%i\n",i,found,sockfd,FD_ISSET(i,&master));
-						if(i!=found && i!=sock && FD_ISSET(i,&master)) {
-							//printf("enviant dades a %i fdmax:%i\n",i,fdmax);
-							sn=send(i,(const void *)buf,numbytes,0);
-							if(sn==-1) {
-								perror("send\n");
-								continue;
-							} else if(sn!=numbytes) {
-								fprintf(stderr,"Error, no se enviaron todos los datos?\n");
-								continue;
-							}
-						}
-					}
+					printf("Received: %s",buf);
+					proccess_request(found,buf,numbytes);
 				}
 			}
 		}
