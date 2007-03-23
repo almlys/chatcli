@@ -124,16 +124,24 @@ void install_handlers() {
 
 /// Client structures
 struct sclient {
-	//int sock; ///<! Client Socket
+	int sock; ///<! Client Socket
 	// Address pair
 	//struct sockaddr_in server ///<! Server address
-	struct sockaddr_in client ///<! Client address
-	char nom[MAXNAME+1];
+	struct sockaddr_in client; ///<! Client address
+	char * nom;
 };
 
-//Registra l'adreça ip / socket
-void session_register(int sock,struct sockaddr_in * client, socklen_t * client_size) {
-	//
+/// Inicialitzar estructura de sessions
+/*void session_init(struct sclient * clients) {
+	clients=NULL;
+}*/
+
+/**
+	Registra l'adreça ip / socket
+	@param sock Socket del client
+*/
+void session_register(struct sclient * clients,int sock,struct sockaddr * client, socklen_t * client_size) {
+	memcpy((void *)&clients[sock-2].client,(const void *)client,sizeof(struct sockaddr_in));
 }
 
 
@@ -143,7 +151,7 @@ int mysend(int csock,char * msg) {
 	int sn;
 	sn=send(csock,(const void *)msg,size,0);
 	if(sn==-1) {
-		perror("send\n");
+		perror("send 345\n");
 		return -1;
 	} else if(sn!=size) {
 		fprintf(stderr,"Error, no se enviaron todos los datos?\n");
@@ -156,8 +164,8 @@ int mysend(int csock,char * msg) {
 int proccess_request(int csock, char * buf, int n) {
 	printf("Processing request: %s\n",buf);
 
-	struct sockaddr_in client;
-	socklen_t client_size=sizeof(struct sockaddr);
+	//struct sockaddr_in client;
+	//socklen_t client_size=sizeof(struct sockaddr);
 
 	/*//Get client address
 	if(getsockname(csock,(struct sockaddr *)&client,&client_size) == -1) {
@@ -173,7 +181,8 @@ int proccess_request(int csock, char * buf, int n) {
 		//HELO message
 		//enviar OK
 		mysend(csock,"100 OK \n");
-	} else {
+	} else if (!strncmp(buf,"exit\n",5)) {;}
+	else{
 		mysend(csock,"200 ERROR\n");
 	}
 
@@ -269,9 +278,16 @@ int server_loop(struct mconfig * config) {
 					}
 					printf("server: got connection from %s , %d\n",inet_ntoa(client.sin_addr),csock);
 	
-					FD_SET(csock,&master);
-					fdmax=csock>fdmax ? csock : fdmax;
-					printf("fdmax is now: %i\n",fdmax);
+					//comprovar que espai per guardar les dades del client
+					if(csock-2 >= MAXCLIENTS) {
+						printf("I cannot allocate %i\n",csock);
+						close(csock);
+					} else {
+						session_register(clients,csock,(struct sockaddr *)&client, &client_size);
+						FD_SET(csock,&master);
+						fdmax=csock>fdmax ? csock : fdmax;
+						printf("fdmax is now: %i\n",fdmax);
+					}
 				} else { //Datos recibidos del cliente
 					//printf("Data was recieved\n");
 					if ((numbytes=recv(found, buf, MAXDATASIZE, 0)) == -1) {
@@ -282,15 +298,12 @@ int server_loop(struct mconfig * config) {
 						printf("El cliente cerro la conexión %i\n",found);
 						close(found);
 						FD_CLR(found,&master);
-						//Actualizar fdmax
-						int new_fdmax=0;
 						if(found==fdmax) {
-							for(i=3; i<fdmax; i++) {
+							for(i=3; i<found; i++) {
 								if(FD_ISSET(i,&master)) {
-									new_fdmax= i>new_fdmax ? i : new_fdmax;
+									fdmax=i;
 								}
 							}
-							fdmax=new_fdmax;
 							printf("fdmax is now: %i\n",fdmax);
 						}
 					}
