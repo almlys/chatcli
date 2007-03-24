@@ -1,3 +1,15 @@
+2007-03-24 13:11  alberto
+
+	* python/server.py: small fix
+
+2007-03-24 12:57  alberto
+
+	* python/server.py: executable bit on server
+
+2007-03-24 03:30  alberto
+
+	* ChangeLog: Added changelog
+
 2007-03-24 03:25  alberto
 
 	* python/sd7netcore.py, python/server.py, python/server2.py: k
