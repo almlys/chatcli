@@ -1,0 +1,12 @@
+server:
+* Falta control d'errors
+* Falta implementar l'ansotegui protocol v 2.0, que encara no esta publicat (per cada dia que tarda, hauria d'ampliar el termini d'entrega)
+* Ya tah!
+
+client:
+* Falta fer-ho tot!
+* Inicialitzacio
+* Conexio TPC abm el servidor
+* Conexions UDP (p2p) amb els clients
+* Polirlo
+* GUI ;)

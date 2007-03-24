@@ -1,0 +1,14 @@
+server:
+* Implementar bon sistema de gestions, dinamic, e ilimitat
+* Implementar version 1.0 del protocol o esperar a per la v 2.0
+* Falta implementar l'ansotegui protocol v 2.0, que encara no esta publicat (per cada dia que tarda, hauria d'ampliar el termini d'entrega)
+O
+* Passar de tot, reconeixer que Python es un ser superior, i fer anar la fantastica i perfecta funcional implementació feta en Python.
+
+client:
+* Falta fer-ho tot!
+* Inicialitzacio
+* Conexio TPC abm el servidor
+* Conexions UDP (p2p) amb els clients
+* Polirlo
+* GUI ;)
