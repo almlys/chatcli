@@ -1,0 +1,85 @@
+2007-03-24 03:25  alberto
+
+	* python/sd7netcore.py, python/server.py, python/server2.py: k
+
+2007-03-24 03:20  alberto
+
+	* python/server.py: This is not anymore part of the 7d7 server, but
+	  its based on it, so remove its tag
+
+2007-03-24 03:18  alberto
+
+	* TODO, python/TODO: TODO lists
+
+2007-03-24 03:10  alberto
+
+	* python/BaseApp.py, python/client.py, python/sd7net.py,
+	  python/server.py: Servidor implementat
+
+2007-03-23 20:48  alberto
+
+	* python/sd7net.py: argh
+
+2007-03-23 20:47  alberto
+
+	* python/sd7netcore.py, python/server2.py: Added sd7 engine
+	  prototype servers
+
+2007-03-23 19:47  alberto
+
+	* cserver.c: kk
+
+2007-03-23 18:59  alberto
+
+	* Makefile, cserver.c: up
+
+2007-03-23 17:15  alberto
+
+	* client-incompleto.c, server-incompleto.c: dd
+
+2007-03-23 16:34  alberto
+
+	* cserver.c: 200 OK
+
+2007-03-23 16:10  alberto
+
+	* Makefile, cserver.c, cserver_old.c, python/sdlogger.py,
+	  python/server.py: some sort of work was done
+
+2007-03-23 14:47  alberto
+
+	* python/server.py: ya ta
+
+2007-03-23 14:46  alberto
+
+	* mpl/esoft2/pracs/p1, mpl/templates/template.py, python,
+	  python/BaseApp.py, python/server.py: something
+
+2007-03-16 19:58  alberto
+
+	* Makefile, client.c, server.c: kk
+
+2007-03-16 16:59  alberto
+
+	* Makefile, client.c, server.c: yeah
+
+2007-03-16 15:59  alberto
+
+	* client.c, server.c: added server/client apps
+
+2007-03-01 13:04  alberto
+
+	* mpl/proclleng/p1/prova.c, Makefile: keep up to date
+
+2007-02-28 23:57  alberto
+
+	* cserver.c: xarxs
+
+2007-02-24 02:23  alberto
+
+	* mpl/templates/template.c, cserver.c, template.c: oke
+
+2007-02-24 01:53  alberto
+
+	* mpl/xarxes2, ., template.c: template
+
