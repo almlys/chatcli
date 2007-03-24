@@ -4,20 +4,9 @@
 # $Id$
 #
 
-import socket, select
-
-class selectInterface(object):
-
-    rwait = []
-
-    def register(self,fdesc):
-        self.rwait.append(fdesc)
-
-    def unregister(self,fdesc):
-        self.rwait.remove(fdesc)
-
-    def wait(self):
-        return select.select(self.rwait, [], [])
+import socket
+import netcommon
+from netcommon import selectInterface
 
 class ProtocolViolation(Exception): pass
 class HelloAlreadySent(ProtocolViolation): pass
@@ -114,6 +103,8 @@ class server(object):
 
     keep_running = True
     bufferSize = 4096
+    shutdowncount = 15
+    shutting_down = False
 
     def __init__(self,lhost="",lport=8642,backlog=10):
         self.socket=None
@@ -133,6 +124,7 @@ class server(object):
         """
         if self.initialized:
             return
+        self.installSignalHandlers()
         self.socket=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         # set Reuse Address
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -156,6 +148,7 @@ class server(object):
 
     def requestLoop(self):
         read, write, excp = self.select.wait()
+            
         for client in read:
             if client==self.socket:
                 # accept (A new connection was accepted)
@@ -225,6 +218,52 @@ class server(object):
             self.requestLoop()
         self.stopOp()
 
+    def signalHandler(self,num,frame):
+        import signal
+        if num==signal.SIGUSR1:
+            signal.signal(num,self.signalHandler)
+            if self.shutting_down:
+                msg = "NOTICE: Self-Destruction cancelled at %i seconds left by admin" %(self.shutdowncount)
+                print msg
+                self.broadcast(msg + "\n")
+                self.shutting_down=False
+            else:
+                msg = "NOTICE: Self-Destruction activated!!"
+                print msg
+                self.broadcast(msg + "\n")
+                signal.alarm(1)
+                self.shutting_down=True
+                self.shutdowncount=15
+        elif num==signal.SIGALRM:
+            signal.signal(num,self.signalHandler)
+            if self.shutting_down:
+                if(self.shutdowncount<=0):
+                    self.keep_running=False
+                    msg = "KABOOUM!!!!"
+                    self.broadcast(msg + "\n")
+                    print msg
+                else:
+                    msg = "NOTICE: %i seconds left for the self-destruction" %(self.shutdowncount)
+                    print msg
+                    self.broadcast(msg + "\n")
+                    self.shutdowncount-=1
+                    signal.alarm(1)
+        elif num==signal.SIGTERM or num==signal.SIGINT:
+            if self.keep_running:
+                self.keep_running=False
+                self.broadcast("I'm being killed!! aie!!\n")
+                signal.signal(num,self.signalHandler)
+            else:
+                import sys
+                print "The server was brutally assasinated by the administrator!"
+                sys.exit()
+
+    def installSignalHandlers(self):
+        import signal
+        signal.signal(signal.SIGTERM, self.signalHandler)
+        signal.signal(signal.SIGINT, self.signalHandler)
+        signal.signal(signal.SIGUSR1, self.signalHandler)
+        signal.signal(signal.SIGALRM, self.signalHandler)
 
 
 def main():
