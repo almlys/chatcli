@@ -138,7 +138,7 @@ class server(object):
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.socket.bind((self.bindAddr,self.bindPort))
         self.socket.listen(self.backlog)
-        print "DBG: Listening to incoming connection on %s port tcp %s" %(self.socket.getsockname())
+        print "DBG: Listening to incoming connections on %s port tcp %s" %(self.socket.getsockname())
         self.initialized=True
         self.select = selectInterface()
         self.select.register(self.socket)
