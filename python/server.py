@@ -4,7 +4,6 @@
 # $Id: template.py 140 2007-03-23 14:46:43Z alberto $
 #
 
-# 7d7net Prototype
 import socket, select
 
 class selectInterface(object):
