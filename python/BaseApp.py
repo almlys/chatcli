@@ -61,7 +61,8 @@ class BaseApplication(object):
     (Gtk, Qt, wxPython, Tk, CEGUI, etc...)
     """
 
-    def __init__(self,config=None):
+    def __init__(self,configFile=None):
+        """Constructor"""
         self.__configFile=config
         self.config=None
         self._loadConfig()
