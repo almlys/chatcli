@@ -68,6 +68,7 @@ std::queue<int> & selectInterface::wait() {
 	for(i=0; i<=_fdmax; i++) {
 		if(FD_ISSET(i,&_readfs)) {
 			_descs.push(i);
+			printf("%i", i);
 		}
 	}
 	return _descs;
@@ -188,18 +189,19 @@ int server::proccessRequest(const int csock,const char * buf) {
 		inet_ntoa(client.sin_addr),ntohs(client.sin_port));
 	*/
 
-	if(!strncmp(buf,"HELO\n",5)) {
-		//HELO message
-		//enviar OK
+	if(!strncmp(buf,"HOLA\n",5)) { //Identificacio
 		sendok(csock,"OK");
-	} else if (!strncmp(buf,"REGISTER ",9)) {
-		sendok(csock,"OK");
-	} else if (!strncmp(buf,"QUERY ",9)) {
-		senderror(csock,"ERROR\n");
-	} else if (!strncmp(buf,"BCAST ",9)) {
-		sendok(csock,"OK");
-	} else if (!strncmp(buf,"EXIT ",9)) {
-		sendok(csock,"OK");
+	} else if (!strncmp(buf,"300 ",4)) { //Registre
+		sendok(csock,"OK - Es demanen per registrar");
+	} else if (!strncmp(buf,"400 ",4)) { //Pregunta
+		sendok(csock,"OK - Ens pregunten");
+	} else if (!strncmp(buf,"600 ",4)) { //Privat
+		sendok(csock,"OK - Enviem un privat");
+	} else if (!strncmp(buf,"700 ",4)) { //Difusio
+		sendok(csock,"OK - Enviem a tothom");
+	} else if (!strncmp(buf,"800\n", 4)) { //Sortir
+		sendok(csock,"OK - Sortim"); 
+		//jo krek k aki hauriam de fer algo no? o deixem k aktui el propi while de requesLoop k ja donara de baixa el klient solet???
 	} else {
 		senderror(csock,"ERROR\n");
 	}

@@ -97,7 +97,7 @@ int main(int argc, char *argv[]) {
 				exit(-1);
 			}
 			//printf("Dades: %s\n",buf);
-			if(!strncmp(buf,"exit\n",n)) {
+			if(!strncmp(buf,"800\n",n)) {
 				keep_running=0;
 			}
 			memset(buf,0,sizeof(buf));
