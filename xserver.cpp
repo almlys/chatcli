@@ -145,21 +145,34 @@ void server::stopOp() {
 
 
 /// Send a message to the client
-int server::mysend(int csock,char * msg) {
+int server::sendall(const int csock,const char * msg) {
 	int size=strlen(msg);
+	int total=0;
 	int sn;
-	sn=send(csock,(const void *)msg,size,0);
-	if(sn==-1) {
-		throw errorException("send");
-	} else if(sn!=size) {
-		fprintf(stderr,"Error, no se enviaron todos los datos?\n");
-		return -1;
+	while(total < size) {
+		sn=send(csock,msg+total,size-total,0);
+		if(sn==-1) throw errorException("send");
+		total += sn;
 	}
 	return 0;
 }
 
+int server::sendok(const int csock,const char * msg) {
+	std::string buf = "100 ";
+	buf += msg;
+	buf += "\n";
+	return sendall(csock,buf.c_str());
+}
+
+int server::senderror(const int csock,const char * msg) {
+	std::string buf = "200 ";
+	buf += msg;
+	buf += "\n";
+	return sendall(csock,buf.c_str());
+}
+
 /// Process a client request
-int server::proccessRequest(int csock, char * buf, int n) {
+int server::proccessRequest(const int csock,const char * buf) {
 	printf("Processing request: %s\n",buf);
 
 	//struct sockaddr_in client;
@@ -175,13 +188,20 @@ int server::proccessRequest(int csock, char * buf, int n) {
 		inet_ntoa(client.sin_addr),ntohs(client.sin_port));
 	*/
 
-	if(!strncmp(buf,"HOLA\n",5)) {
+	if(!strncmp(buf,"HELO\n",5)) {
 		//HELO message
 		//enviar OK
-		mysend(csock,"100 OK \n");
-	} else if (!strncmp(buf,"exit\n",5)) {;}
-	else{
-		mysend(csock,"200 ERROR\n");
+		sendok(csock,"OK");
+	} else if (!strncmp(buf,"REGISTER ",9)) {
+		sendok(csock,"OK");
+	} else if (!strncmp(buf,"QUERY ",9)) {
+		senderror(csock,"ERROR\n");
+	} else if (!strncmp(buf,"BCAST ",9)) {
+		sendok(csock,"OK");
+	} else if (!strncmp(buf,"EXIT ",9)) {
+		sendok(csock,"OK");
+	} else {
+		senderror(csock,"ERROR\n");
 	}
 
 	return 0;
@@ -215,10 +235,15 @@ void server::requestLoop() {
 			if(num==0) {
 				printf("El cliente cerro la conexión %i\n",client);
 				_clients->remove(client);
+				continue;
 			}
 			buf[num] = '\0';
 			printf("Received: %s",buf);
-			proccessRequest(client,buf,num);
+			try {
+				proccessRequest(client,buf);
+			} catch(std::exception &e) {
+				std::cout<<"Notice: Exception proccessig a request: "<<e.what()<<std::endl;
+			}
 		}
 	}
 }

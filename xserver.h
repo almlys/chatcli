@@ -61,8 +61,10 @@ public:
 	void stopOp();
 	void requestLoop();
 	void run();
-	int proccessRequest(int csock, char * buf, int n);
-	int mysend(int csock,char * msg);
+	int proccessRequest(const int csock, const char * buf);
+	int sendall(const int csock, const char * msg);
+	int sendok(const int csock, const char * msg);
+	int senderror(const int csock, const char * msg);
 };
 
 #endif
