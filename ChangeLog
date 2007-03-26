@@ -1,3 +1,40 @@
+2007-03-25 22:00  josep
+
+	* client.c, xserver.cpp:
+
+2007-03-25 19:04  alberto
+
+	* xserver.cpp, xserver.h: ah
+
+2007-03-25 03:04  alberto
+
+	* Makefile, xserver.cpp, xserver.h: No hem trovaba comode amb
+	  l\'antic code, aquesta nova versió es més fácil de lleguir, i
+	  molt més clara i bonica \;)
+
+2007-03-24 23:49  josep
+
+	* cserver.cpp:
+
+2007-03-24 18:31  alberto
+
+	* python/client.py, python/netcommon.py, python/server.py: python
+	  client ;)
+
+2007-03-24 16:39  alberto
+
+	* python/BaseApp.py, python/client.py, python/netcommon.py,
+	  python/sdlogger.py: argh
+
+2007-03-24 16:36  alberto
+
+	* python/client.py, python/netcommon.py: client2
+
+2007-03-24 16:34  alberto
+
+	* ChangeLog, python/BaseApp.py, python/client.py,
+	  python/sdlogger.py: properties
+
 2007-03-24 13:11  alberto
 
 	* python/server.py: small fix

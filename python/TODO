@@ -1,12 +1,14 @@
-server:
-* Falta control d'errors
-* Falta implementar l'ansotegui protocol v 2.0, que encara no esta publicat (per cada dia que tarda, hauria d'ampliar el termini d'entrega)
+** server (finished) **
+=======================
+* (Funcionalitat Extra) Processar parámetres com la respectiva versió en c.
+* (Funcionalitat Extra) Afegir les extensions que vulgem al protocol.
+* Beta testing, intentar petar-lo i destroçar-lo, comprobar lo que aguanta...
+* Polirlo
 * Ya tah!
 
-client:
-* Falta fer-ho tot!
+** client **
+============
 * Inicialitzacio
-* Conexio TPC abm el servidor
-* Conexions UDP (p2p) amb els clients
+* Acabar d'implementar el protocol client<->servidor
 * Polirlo
 * GUI ;)

@@ -1,14 +1,30 @@
-server:
-* Implementar bon sistema de gestions, dinamic, e ilimitat
-* Implementar version 1.0 del protocol o esperar a per la v 2.0
-* Falta implementar l'ansotegui protocol v 2.0, que encara no esta publicat (per cada dia que tarda, hauria d'ampliar el termini d'entrega)
-O
-* Passar de tot, reconeixer que Python es un ser superior, i fer anar la fantastica i perfecta funcional implementació feta en Python.
+** server **
+============
+* Acabar d'Implementar bon sistema de gestió de sessions de client (emprant MAPS ;) ) mitjançant una classe sessionMGR com la de la versió en Python server.py
+* Acabar d'Implementar l'ansotegui protocol v 2.0
 
-client:
-* Falta fer-ho tot!
+** client **
+============
+* Refer la porqueria actual, a algo més bonic, similar a la conversió server.c <-> xserver.cpp, seguint com a guia la implementació feta amb Python
 * Inicialitzacio
-* Conexio TPC abm el servidor
+* Implementar el protocol
 * Conexions UDP (p2p) amb els clients
 * Polirlo
 * GUI ;)
+
+Doncs, es veritat allo que diuen, que Python va molt bé per diseñar programes que després acabarás fent amb C++ ;)
+
+** Joc De proves (al final) **
+==============================
+* Implementar una serie de scripts, programes i proves malicioses per exprimir el servidor i el client al extrem. Aquestos mateixos scripts els farem anar a l'hora de fer el peer review.
+
+** Documentació del codi (al final) **
+======================================
+* Documentar tot el codi al estil Javadoc
+
+** Documentació (al final del final del finai...) **
+====================================================
+* Un Fucking Manual de compilació, execució i/o instalació del servidor/client.
+* Un document ple de rotllos de justificacions i contrajustificacions del disseny.
+
+
