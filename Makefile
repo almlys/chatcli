@@ -39,4 +39,4 @@ xserver: ${XSERVER_OBJ}
 	${BUILDCPP} -o xserver ${XSERVER_OBJ}
 
 clean:
-	rm -rf *.o ${BINS} ${BINS2} ${XBINS}
+	rm -rf *~ *.o ${BINS} ${BINS2} ${XBINS}
