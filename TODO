@@ -1,5 +1,6 @@
 ** server (finished!!) :) **
 ============================
+* Arreglar BUG número #238283: El servidor passe completament dels separadors, i procesa les dades rebudes per cad PUSH del protocol TCP, i no hauria de ser així. Ara funciona, pq per defecte quan s'envia un /n, les implementacions de TCP actuals envien automaticament un PUSH, pero si per exemple configuren telnet per envia un PUSH per cada caracter la cosa no acaba de funcionar. (Per exemple el hasecorp telnet es famós en enviar un PUSH per cada carácter)
 * (Funcionalitat Extra) Processar parámetres com la respectiva versió en c.
 * (Funcionalitat Extra) Afegir les extensions que vulgem al protocol.
 * Beta testing, intentar petar-lo i destroçar-lo, comprobar lo que aguanta...

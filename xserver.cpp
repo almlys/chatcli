@@ -21,6 +21,7 @@ const char * protocol::sep="\r\n";
 // "\n" *nix systems
 // "\r" Old Mac systems
 // "\r\n" Hasecorp Hasefroch systems
+// Justificació del nostre separador: El protocol HTTP, la propia aplicació de telnet, i altres emprent com a estandar l'enviament de \r\n com a separadors de comandes
 const char * protocol::ok="100";
 const char * protocol::error="200";
 const char * protocol::helo="HOLA";
