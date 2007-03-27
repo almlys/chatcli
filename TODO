@@ -1,7 +1,11 @@
-** server **
-============
-* Acabar d'Implementar bon sistema de gestió de sessions de client (emprant MAPS ;) ) mitjançant una classe sessionMGR com la de la versió en Python server.py
-* Acabar d'Implementar l'ansotegui protocol v 2.0
+** server (finished!!) :) **
+============================
+* (Funcionalitat Extra) Processar parámetres com la respectiva versió en c.
+* (Funcionalitat Extra) Afegir les extensions que vulgem al protocol.
+* Beta testing, intentar petar-lo i destroçar-lo, comprobar lo que aguanta...
+* Polirlo
+* Ya tah!
+
 
 ** client **
 ============

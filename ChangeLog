@@ -1,3 +1,12 @@
+2007-03-26 20:56  josep
+
+	* Makefile, cudp.c, sudp.c:
+
+2007-03-26 02:35  alberto
+
+	* ChangeLog, TODO, python/TODO, python/server.py: server.py Release
+	  Candidate 1
+
 2007-03-25 22:00  josep
 
 	* client.c, xserver.cpp:

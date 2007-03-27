@@ -47,6 +47,15 @@ const char * errorException::what() const throw() {
 	return errortext.c_str();
 }
 
+protocolViolation::protocolViolation(const char * in) {
+	_in=in;
+}
+
+const char *protocolViolation::what() const throw() {
+	return _in;
+}
+
+
 selectInterface::selectInterface() {
 	FD_ZERO(&_readfs);
 	FD_ZERO(&_master);
@@ -109,8 +118,33 @@ const char * clientSession::getName() const {
 	return _name.c_str();
 }
 
-U32 clientSession::getAddr() const {
+void clientSession::setName(const char * name) {
+	_name=name;
+}
+
+const char * clientSession::getAddr() const {
+	in_addr cip;
+	cip.s_addr=htonl(_addr);
+	return inet_ntoa(cip);
+}
+
+U32 clientSession::getIp() const {
 	return _addr;
+}
+
+void clientSession::rcvHello() {
+	if(_status!=kNew) throw protocolViolation("Hello was already sent");
+	_status=kIdent;
+}
+
+void clientSession::rcvRegister() {
+	if(_status==kNew) throw protocolViolation("Hello was not sent");
+	_status=kRegister;
+}
+
+
+bool clientSession::isHallowed() const {
+	return _status==kIdent;
 }
 
 bool clientSession::isRegistered() const {
@@ -143,6 +177,22 @@ void clientSession::senderror(const char * msg) {
 	sendall(buf.c_str());
 }
 
+void clientSession::senddif(const char * msg) {
+	std::string buf = protocol::bcast;
+	buf += " ";
+	buf += msg;
+	buf += protocol::sep;
+	sendall(buf.c_str());
+}
+
+void clientSession::sendanswer(const char * msg) {
+	std::string buf = protocol::answer;
+	buf += " ";
+	buf += msg;
+	buf += protocol::sep;
+	sendall(buf.c_str());
+}
+
 
 sessionMGR::sessionMGR(server * parent) {
 	_parent=parent;
@@ -160,6 +210,11 @@ void sessionMGR::add(int sock,U32 addr) {
 	clientSession * cli = new clientSession(sock,addr);
 	if(_clients.find(addr) != _clients.end()) {
 		printf("Found! deleting...\n");
+		try {
+			_clients[addr]->senddif("Sorry, only one connection per ip is accepted!");
+		} catch(errorException & e) {
+			std::cout<<"Exception sending data..."<<e.what()<<std::endl;
+		}
 		remove(_clients[addr]);
 	}
 	_clients[addr]=cli;
@@ -176,7 +231,7 @@ void sessionMGR::remove(clientSession * client) {
 		_parent->broadcast(out.c_str(),client);
 		_nicks.erase(client->getName());
 	}
-	_clients.erase(client->getAddr());
+	_clients.erase(client->getIp());
 	_sockets.erase(client->fileno());
 	delete client;
 }
@@ -186,9 +241,39 @@ void sessionMGR::remove(int sock) {
 	remove((clientSession *)find(sock));
 }
 
-const clientSession * sessionMGR::find(int sock) {
+clientSession * sessionMGR::find(int sock) {
 	return _sockets[sock];
 }
+
+void sessionMGR::register2(clientSession * client,const char * nick) {
+	if(_nicks.find(nick) != _nicks.end()) {
+		throw protocolViolation("NickAlreadyExists!");
+	}
+	std::string msg;
+	if(client->getName()!=NULL && _nicks.find(client->getName()) != _nicks.end()) {
+		_nicks.erase(client->getName());
+		msg=client->getName();
+		msg+=" is now know as ";
+		msg+=nick;
+		_parent->broadcast(msg.c_str(),client);
+	} else {
+		msg=nick;
+		msg+=" has joined the chat";
+		_parent->broadcast(msg.c_str(),client);
+	}
+	client->rcvRegister();
+	client->setName(nick);
+	_nicks[client->getName()]=client;
+}
+
+const char * sessionMGR::findAddress(const char * nick) {
+	if(_nicks.find(nick) != _nicks.end()) {
+		return _nicks[nick]->getAddr();
+	} else {
+		return "null";
+	}
+}
+
 
 server::server(const std::string lhost,const U16 lport,const Byte backlog) {
 	_keep_running = true;
@@ -252,7 +337,8 @@ void server::broadcast(const char * msg,const clientSession * client) {
 	clients=_clients->getAllClients();
 	std::map<U32,clientSession *>::iterator iter;
 	for(iter = clients.begin(); iter!=clients.end(); iter++) {
-		if(iter->second->fileno()!=client->fileno() && iter->second->isRegistered()) {
+		std::cout<<"Key: "<<iter->first<<std::endl;
+		if((client==NULL || iter->second->fileno()!=client->fileno()) && iter->second->isRegistered()) {
 			std::string out = protocol::bcast;
 			out+= " ";
 			out+=msg;
@@ -266,65 +352,51 @@ void server::broadcast(const char * msg,const clientSession * client) {
 	}
 }
 
-/// Send a message to the client
-int server::sendall(const int csock,const char * msg) {
-	int size=strlen(msg);
-	int total=0;
-	int sn;
-	while(total < size) {
-		sn=send(csock,msg+total,size-total,0);
-		if(sn==-1) throw errorException("send");
-		total += sn;
-	}
-	return 0;
-}
-
-int server::sendok(const int csock,const char * msg) {
-	std::string buf = "100 ";
-	buf += msg;
-	buf += "\n";
-	return sendall(csock,buf.c_str());
-}
-
-int server::senderror(const int csock,const char * msg) {
-	std::string buf = "200 ";
-	buf += msg;
-	buf += "\n";
-	return sendall(csock,buf.c_str());
-}
 
 /// Process a client request
-int server::proccessRequest(const int csock,const char * buf) {
-	printf("Processing request: %s\n",buf);
-
-	//struct sockaddr_in client;
-	//socklen_t client_size=sizeof(struct sockaddr);
-
-	/*//Get client address
-	if(getsockname(csock,(struct sockaddr *)&client,&client_size) == -1) {
-		perror("getsockname");
-		return -1;
+int server::proccessRequest(clientSession * client,char * buf) {
+	int len;
+	len=strlen(buf)-1;
+	while (buf[len]=='\n' || buf[len]=='\r') {
+		buf[len--]='\0';
 	}
-
-	DBG(1,"Got Connection from %s:%i\n",
-		inet_ntoa(client.sin_addr),ntohs(client.sin_port));
-	*/
-
-	if(!strncmp(buf,"HOLA\n",5)) { //Identificacio
-		sendok(csock,"OK");
-	} else if (!strncmp(buf,"300 ",4)) { //Registre
-		sendok(csock,"OK - Es demanen per registrar");
-	} else if (!strncmp(buf,"400 ",4)) { //Pregunta
-		sendok(csock,"OK - Ens pregunten");
-	} else if (!strncmp(buf,"600 ",4)) { //Privat
-		sendok(csock,"OK - Enviem un privat");
-	} else if (!strncmp(buf,"700 ",4)) { //Difusio
-		sendok(csock,"OK - Enviem a tothom");
-	} else if (!strncmp(buf,"800\n", 4)) { //Sortir
-		sendok(csock,"OK - Sortim"); 
-		//jo krek k aki hauriam de fer algo no? o deixem k aktui el propi while de requesLoop k ja donara de baixa el klient solet???
+	//printf("Processing request: %s<-\n",buf);
+	std::string req=buf;
+	std::string cmd;
+	std::string data;
+	std::string::size_type pos;
+	pos=req.find(" ", 0);
+	if(pos==std::string::npos) {
+		cmd=req;
 	} else {
-		senderror(csock,"ERROR\n");
+		cmd=req.substr(0,pos);
+		data=req.substr(pos+1);
+	}
+	std::cout<<"Processing request, command: "<<cmd<<",data: "<<data<<std::endl;
+	const char * nick=NULL;
+	if(data!="") nick=data.c_str();
+
+	if(cmd==protocol::helo && !client->isHallowed()) { //Identificacio
+		client->sendOk("OK");
+		client->rcvHello();
+	} else if ((client->isHallowed() || client->isRegistered()) && nick!=NULL && cmd==protocol::register2) { //Registre
+		_clients->register2(client,nick);
+		client->sendOk("OK");
+	} else if (client->isRegistered() && nick!=NULL && cmd==protocol::query) { //Pregunta
+		client->sendanswer(_clients->findAddress(nick));
+	} else if (client->isRegistered() && cmd==protocol::bcast) { //Difusio
+		std::string msg;
+		msg+=client->getName();
+		msg+=" says: ";
+		msg+=data;
+		broadcast(msg.c_str(),client);
+		client->sendOk("OK - Enviem a tothom");
+	} else if (cmd==protocol::exit) { //Sortir
+		//client->sendok("OK - Sortim"); La versió 2.0 no especifica si cal enviar OK o no al rebre la comanda sortir, que fen, ens ho jugen a cara o creu??
+		_clients->remove(client);
+	} else {
+		client->senderror("ERROR");
+		_clients->remove(client);
 	}
 
 	return 0;
@@ -361,11 +433,13 @@ void server::requestLoop() {
 				continue;
 			}
 			buf[num] = '\0';
-			printf("Received: %s",buf);
+			//printf("Received: %s",buf);
 			try {
-				proccessRequest(client,buf);
+				proccessRequest(_clients->find(client),buf);
 			} catch(std::exception &e) {
 				std::cout<<"Notice: Exception proccessig a request: "<<e.what()<<std::endl;
+				_clients->find(client)->senderror("error");
+				_clients->remove(client);
 			}
 		}
 	}

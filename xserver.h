@@ -58,12 +58,15 @@ public:
 	void senderror(const char * msg);
 	void sendOk(const char * msg);
 	void sendanswer(const char * msg);
+	void senddif(const char * msg);
 	void rcvHello();
+	void rcvRegister();
 	void setName(const char * name);
 	const char * getName() const;
 	bool isHallowed() const;
 	bool isRegistered() const;
-	U32 getAddr() const;
+	const char * getAddr() const;
+	U32 getIp() const;
 };
 
 
@@ -78,11 +81,11 @@ private:
 public:
 	sessionMGR(server * parent);
 	~sessionMGR();
-	const clientSession * find(int sock);
+	clientSession * find(int sock);
 	void add(int sock,U32 addr);
 	void remove(int sock);
 	void remove(clientSession * client);
-	void register2(const clientSession * client,const char * name);
+	void register2(clientSession * client,const char * name);
 	const char * findAddress(const char * name);
 	std::map<U32,clientSession *> & getAllClients();
 };
@@ -121,10 +124,10 @@ public:
 	void stopOp();
 	void requestLoop();
 	void run();
-	int proccessRequest(const int csock, const char * buf);
-	int sendall(const int csock, const char * msg);
+	int proccessRequest(clientSession *,char * buf);
+	/*int sendall(const int csock, const char * msg);
 	int sendok(const int csock, const char * msg);
-	int senderror(const int csock, const char * msg);
+	int senderror(const int csock, const char * msg);*/
 	void broadcast(const char * msg,const clientSession * client=NULL);
 };
 
