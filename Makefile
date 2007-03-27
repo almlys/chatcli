@@ -24,7 +24,7 @@ BUILDCPP=${CPP} ${CPPFLAGS}
 all: ${BINS2} ${BINS} ${XBINS}
 
 client: ${CLIENT_OBJ}
-	${BUILD} -o client ${CLIENT_OBJ}
+	${BUILDCPP} -o client ${CLIENT_OBJ}
 
 server: ${SERVER_OBJ}
 	${BUILD} -o server ${SERVER_OBJ}
