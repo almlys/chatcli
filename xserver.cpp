@@ -3,6 +3,7 @@
 #include <string>
 #include <exception>
 #include <queue>
+#include <map>
 
 #include <errno.h>
 #include <sys/socket.h>
@@ -14,6 +15,21 @@
 //I really hate this, pero no buscamos finezas
 #define MAXDATASIZE 4096
 //End hate list
+
+//Protocol stuff
+const char * protocol::sep="\r\n";
+// "\n" *nix systems
+// "\r" Old Mac systems
+// "\r\n" Hasecorp Hasefroch systems
+const char * protocol::ok="100";
+const char * protocol::error="200";
+const char * protocol::helo="HOLA";
+const char * protocol::register2="300";
+const char * protocol::query="400";
+const char * protocol::answer="500";
+const char * protocol::pm="600";
+const char * protocol::bcast="700";
+const char * protocol::exit="800";
 
 
 errorException::errorException(const char * in) {
@@ -38,6 +54,7 @@ selectInterface::selectInterface() {
 }
 
 void selectInterface::register2(int fdesc) {
+	printf("registe: %i\n",fdesc);
 	FD_SET(fdesc,&_master);
 	_fdmax = fdesc>_fdmax ? fdesc : _fdmax;
 }
@@ -46,7 +63,7 @@ void selectInterface::unregister(int fdesc) {
 	FD_CLR(fdesc,&_master);
 	if(_fdmax == fdesc) {
 		int i;
-		for(i=fdesc-1; i>3; i++) {
+		for(i=fdesc-1; i>3; i--) {
 			if(FD_ISSET(i,&_master)) {
 				_fdmax=i;
 				break;
@@ -68,23 +85,109 @@ std::queue<int> & selectInterface::wait() {
 	for(i=0; i<=_fdmax; i++) {
 		if(FD_ISSET(i,&_readfs)) {
 			_descs.push(i);
-			printf("%i", i);
+			//printf("%i", i);
 		}
 	}
 	return _descs;
 }
 
+
+clientSession::clientSession(int socket,U32 addr) {
+	_socket=socket;
+	_addr=addr;
+	_status=kNew;
+}
+
+int clientSession::fileno() const {
+	return _socket;
+}
+
+const char * clientSession::getName() const {
+	if(strlen(_name.c_str())==0) {
+		return NULL;
+	}
+	return _name.c_str();
+}
+
+U32 clientSession::getAddr() const {
+	return _addr;
+}
+
+bool clientSession::isRegistered() const {
+	return _status==kRegister;
+}
+
+/// Send a message to the client
+void clientSession::sendall(const char * msg) {
+	int size=strlen(msg);
+	int total=0;
+	int sn;
+	while(total < size) {
+		sn=send(_socket,msg+total,size-total,0);
+		if(sn==-1) throw errorException("send");
+		total += sn;
+	}
+}
+
+void clientSession::sendOk(const char * msg) {
+	std::string buf = protocol::ok;
+	//buf += msg;
+	buf += protocol::sep;
+	sendall(buf.c_str());
+}
+
+void clientSession::senderror(const char * msg) {
+	std::string buf = protocol::error;
+	//buf += msg;
+	buf += protocol::sep;
+	sendall(buf.c_str());
+}
+
+
 sessionMGR::sessionMGR(server * parent) {
 	_parent=parent;
 }
 
-void sessionMGR::add(int sock) {
+sessionMGR::~sessionMGR() {
+
+}
+
+std::map<U32,clientSession *> & sessionMGR::getAllClients() {
+	return _clients;
+}
+
+void sessionMGR::add(int sock,U32 addr) {
+	clientSession * cli = new clientSession(sock,addr);
+	if(_clients.find(addr) != _clients.end()) {
+		printf("Found! deleting...\n");
+		remove(_clients[addr]);
+	}
+	_clients[addr]=cli;
+	_sockets[sock]=cli;
 	_parent->_select.register2(sock);
 }
 
+void sessionMGR::remove(clientSession * client) {
+	if(close(client->fileno())!=0) throw errorException("close");
+	_parent->_select.unregister(client->fileno());
+	if(client->getName()!=NULL) {
+		std::string out=client->getName();
+		out+=" has left the chat";
+		_parent->broadcast(out.c_str(),client);
+		_nicks.erase(client->getName());
+	}
+	_clients.erase(client->getAddr());
+	_sockets.erase(client->fileno());
+	delete client;
+}
+
+
 void sessionMGR::remove(int sock) {
-	if(close(sock)!=0) throw errorException("close");
-	_parent->_select.unregister(sock);
+	remove((clientSession *)find(sock));
+}
+
+const clientSession * sessionMGR::find(int sock) {
+	return _sockets[sock];
 }
 
 server::server(const std::string lhost,const U16 lport,const Byte backlog) {
@@ -144,6 +247,24 @@ void server::stopOp() {
 	}
 }
 
+void server::broadcast(const char * msg,const clientSession * client) {
+	std::map<U32,clientSession *> clients;
+	clients=_clients->getAllClients();
+	std::map<U32,clientSession *>::iterator iter;
+	for(iter = clients.begin(); iter!=clients.end(); iter++) {
+		if(iter->second->fileno()!=client->fileno() && iter->second->isRegistered()) {
+			std::string out = protocol::bcast;
+			out+= " ";
+			out+=msg;
+			out+=protocol::sep;
+			try {
+				iter->second->sendall(out.c_str());
+			} catch(errorException & e) {
+				std::cout<<"Exception sendind data... "<<e.what()<<std::endl;
+			}
+		}
+	}
+}
 
 /// Send a message to the client
 int server::sendall(const int csock,const char * msg) {
@@ -226,7 +347,7 @@ void server::requestLoop() {
 				//continue;
 			}
 			printf("server: got connection from %s , %d\n",inet_ntoa(client.sin_addr),csock);
-			_clients->add(csock);
+			_clients->add(csock,ntohl(client.sin_addr.s_addr));
 		} else {
 			// Data was recieved from a client
 			char buf[MAXDATASIZE];

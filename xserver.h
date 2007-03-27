@@ -6,6 +6,27 @@ typedef unsigned char Byte;
 typedef unsigned short int U16;
 typedef unsigned int U32;
 
+///Protocol
+namespace protocol {
+	extern const char * sep;
+	// "\n" *nix systems
+	// "\r" Old Mac systems
+	// "\r\n" Hasecorp Hasefroch systems
+	extern const char * ok;
+	extern const char * error;
+	extern const char * helo;
+	extern const char * register2;
+	extern const char * query;
+	extern const char * answer;
+	extern const char * pm;
+	extern const char * bcast;
+	extern const char * exit;
+};
+
+///Define client states
+enum ClientStatus { kNew=0, kIdent=1, kRegister=2 };
+
+
 /// Encapsulate errors into this exception
 class errorException: public std::exception {
 private:
@@ -16,15 +37,54 @@ public:
 	virtual const char * what() const throw();
 };
 
+class protocolViolation: public std::exception {
+private:
+	const char * _in;
+public:
+	protocolViolation(const char * in);
+	virtual const char * what() const throw();
+};
+
+class clientSession {
+private:
+	int _socket;
+	U32 _addr;
+	std::string _name;
+	ClientStatus _status;
+public:
+	clientSession(int socket,U32 addr);
+	int fileno() const;
+	void sendall(const char * msg);
+	void senderror(const char * msg);
+	void sendOk(const char * msg);
+	void sendanswer(const char * msg);
+	void rcvHello();
+	void setName(const char * name);
+	const char * getName() const;
+	bool isHallowed() const;
+	bool isRegistered() const;
+	U32 getAddr() const;
+};
+
+
 class server;
 
 class sessionMGR {
 private:
 	server * _parent;
+	std::map<U32,clientSession *> _clients;
+	std::map<std::string,clientSession *> _nicks;
+	std::map<int,clientSession *> _sockets;
 public:
 	sessionMGR(server * parent);
-	void add(int sock);
+	~sessionMGR();
+	const clientSession * find(int sock);
+	void add(int sock,U32 addr);
 	void remove(int sock);
+	void remove(clientSession * client);
+	void register2(const clientSession * client,const char * name);
+	const char * findAddress(const char * name);
+	std::map<U32,clientSession *> & getAllClients();
 };
 
 
@@ -65,6 +125,7 @@ public:
 	int sendall(const int csock, const char * msg);
 	int sendok(const int csock, const char * msg);
 	int senderror(const int csock, const char * msg);
+	void broadcast(const char * msg,const clientSession * client=NULL);
 };
 
 #endif
