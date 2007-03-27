@@ -1,3 +1,12 @@
+2007-03-27 02:32  alberto
+
+	* ChangeLog, TODO, xserver.cpp, xserver.h: Ya tah\!\!\! (el server
+	  només)
+
+2007-03-27 00:35  alberto
+
+	* xserver.cpp, xserver.h: Oh la lah
+
 2007-03-26 20:56  josep
 
 	* Makefile, cudp.c, sudp.c:
