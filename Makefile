@@ -33,7 +33,7 @@ cserver: ${CSERVER_OBJ}
 	${BUILD} -o cserver ${CSERVER_OBJ}
 
 cclient: ${CSERVER_OBJ}
-	${BUILD} -o cserver ${CSERVER_OBJ}
+	${BUILDCPP} -o cserver ${CSERVER_OBJ}
 
 xserver: ${XSERVER_OBJ}
 	${BUILDCPP} -o xserver ${XSERVER_OBJ}

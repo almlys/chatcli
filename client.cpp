@@ -26,9 +26,9 @@ using namespace std;
 #define AQ { printf("Estoy aquí: %s,%i,%s\n",__FILE__,__LINE__,__FUNCTION__); }
 
 
-/// Process recived data
-int processdata(char * buf) {
-	int len;
+/// Send message with udp
+int sendudp(char * buf, string str) {
+	int len, sn;
 	len=strlen(buf)-1;
 	while (buf[len]=='\n' || buf[len]=='\r') {
 		buf[len--]='\0';
@@ -48,7 +48,9 @@ int processdata(char * buf) {
 	cout<<"Processing request, command: "<<cmd<<",data: "<<data<<endl;
 	const char * ip=NULL;
 	if(data!="") ip=data.c_str();
-
+	const char * msg=NULL;
+	if(str!="") msg=str.c_str();
+	
 	if(cmd=="500") { //Identificacio
 		cout<<"Intentat enviar missatge privat..."<<endl;
 		if (data!="null") {
@@ -75,7 +77,7 @@ int processdata(char * buf) {
 			bzero(&(their_addr_udp.sin_zero), 8); /* pone en cero el resto */
 		
 			/* enviamos el mensaje */
-			if ((numbytes=sendto(sockfdudp,ip,strlen(ip),0,(struct sockaddr *)&their_addr_udp, sizeof(struct sockaddr))) == -1) {
+			if ((numbytes=sendto(sockfdudp,msg,strlen(msg),0,(struct sockaddr *)&their_addr_udp, sizeof(struct sockaddr))) == -1) {
 				perror("sendto");
 				exit(1);
 			}
@@ -83,28 +85,72 @@ int processdata(char * buf) {
 		} else {
 			cout<<"No s'ha pogut enviar el privat. El client no existeix."<<endl;
 		}
-	} /*else if ((client->isHallowed() || client->isRegistered()) && nick!=NULL && cmd==protocol::register2) { //Registre
-		_clients->register2(client,nick);
-		client->sendOk("OK");
-	} else if (client->isRegistered() && nick!=NULL && cmd==protocol::query) { //Pregunta
-		client->sendanswer(_clients->findAddress(nick));
-	} else if (client->isRegistered() && cmd==protocol::bcast) { //Difusio
-		std::string msg;
-		msg+=client->getName();
-		msg+=" says: ";
-		msg+=data;
-		broadcast(msg.c_str(),client);
-		client->sendOk("OK - Enviem a tothom");
-	} else if (cmd==protocol::exit) { //Sortir
-		//client->sendok("OK - Sortim"); La versió 2.0 no especifica si cal enviar OK o no al rebre la comanda sortir, que fen, ens ho jugen a cara o creu??
-		_clients->remove(client);
-	} else {
-		client->senderror("ERROR");
-		_clients->remove(client);
-	}*/
+	}
 
 	return 0;
 }
+
+/// Process recived data of the user
+int processdata(int sock, char * buf, int n) {
+	int len, sn;
+	len=strlen(buf)-1;
+	while (buf[len]=='\n' || buf[len]=='\r') {
+		buf[len--]='\0';
+	}
+	//printf("Processing request: %s<-\n",buf);
+	string req=buf;
+	string str1;
+	string str2;
+	string::size_type pos;
+	pos=req.find(": ", 0);
+	if(pos==std::string::npos) {
+		str1=req;
+	} else {
+		str1=req.substr(0,pos);
+		str2=req.substr(pos+1);
+	}
+	cout<<"Processing request, command: "<<str1<<",data: "<<str2<<endl;
+
+	if(str1=="ayuda") { //Identificacio
+		cout<<"MOSTREM L'AJUDA"<<endl;
+	} else if(str1=="salir"){
+		cout<<"CRIDEM LA FUNCIO SORTIR"<<endl;
+	} else if(str1=="all"){
+		cout<<"Enviem a tothom..."<<endl;
+		sprintf(buf,"700 %s", str2.c_str());
+		if((sn=send(sock,(const void *)buf,n,0))==-1) {
+			perror("send\n");
+			exit(-1);
+		} else if(sn!=n) {
+			fprintf(stderr,"Error, no se enviaron todos los datos?\n");
+			exit(-1);
+		}
+	} else {
+		cout<<"Enviem el privat..."<<endl;
+		cout<<"Primer solicitem ip desti..."<<endl;
+		sprintf(buf,"400 %s", str1.c_str());
+		if((sn=send(sock,(const void *)buf,n,0))==-1) {
+			perror("send\n");
+			exit(-1);
+		} else if(sn!=n) {
+			fprintf(stderr,"Error, no se enviaron todos los datos?\n");
+			exit(-1);
+		}
+		memset(buf,0,sizeof(buf));
+		if ((sn=recv(sock, buf, MAXDATASIZE-1, 0)) == -1) {
+			perror("recv");
+			exit(-1);
+		}
+		if(sn==0) {
+			printf("El servidor cerró la conexión\n");
+		}
+		cout<<buf<<endl;
+		sendudp(buf, str2);
+	}
+
+	return 0;
+}
+
 
 int startupc(){
 	int sockudp; /* descriptor para el socket */
@@ -143,13 +189,17 @@ int main(int argc, char *argv[]) {
 	fd_set readfs;
 	fd_set master;
 
+	string user, ips;
+	printf("Esperando un identificador de usuario: ");
+	cin>>user;
+	printf("Esperando la direccion de un servidor: ");
+	cin>>ips;
+	cout<<"Conexion, identificacion y registro, serv: "<<ips<<", usuario: "<<user<<endl;
+	const char * ip=NULL;
+	if(ips!="") ip=ips.c_str();
 
-	if (argc != 2) {
-	    fprintf(stderr,"usage: client hostname\n");
-	    exit(-1);
-	}	
 
-	if ((he=gethostbyname(argv[1])) == NULL) {  // get the host info 
+	if ((he=gethostbyname(ip)) == NULL) {  // get the host info 
 	    perror("gethostbyname");
 	    exit(-1);
 	}
@@ -179,6 +229,52 @@ int main(int argc, char *argv[]) {
 	    exit(-1);
 	}
 
+	cout<<"Identifikem"<<endl;
+	sprintf(buf,"HOLA\0");
+	if((sn=send(sockfd,(const void *)buf,5,0))==-1) {
+		perror("send\n");
+		exit(-1);
+	} else if(sn!=5) {
+		fprintf(stderr,"Error, no se enviaron todos los datos?\n");
+		exit(-1);
+	}
+	memset(buf,0,sizeof(buf));
+	if ((numbytes=recv(sockfd, buf, MAXDATASIZE-1, 0)) == -1) {
+		perror("recv");
+		exit(-1);
+	}
+	if(numbytes==0) {
+		printf("El servidor cerró la conexión\n");
+		keep_running=0;
+	}
+	buf[numbytes] = '\0';
+	if(!strncmp(buf,"100",3)){
+		printf("Identificats correctament\n");
+	}
+
+	cout<<"Registrem"<<endl;
+	sprintf(buf,"300 %s\0", user.c_str());
+	n=sizeof(buf);
+	if((sn=send(sockfd,(const void *)buf,n,0))==-1) {
+		perror("send\n");
+		exit(-1);
+	} else if(sn!=n) {
+		fprintf(stderr,"Error, no se enviaron todos los datos?\n");
+		exit(-1);
+	}
+	memset(buf,0,sizeof(buf));
+	if ((numbytes=recv(sockfd, buf, MAXDATASIZE-1, 0)) == -1) {
+		perror("recv");
+		exit(-1);
+	}
+	if(numbytes==0) {
+		printf("El servidor cerró la conexión\n");
+		keep_running=0;
+	}
+	if(!strncmp(buf,"100",3)){
+		cout<<"Registrats correctament"<<endl;
+	}
+	
 //Objetivo:
 //	1- Utilizar el select para detectar cunado se han introducido datos por teclado
 //	2- Mostra los datos introducidos
@@ -211,18 +307,11 @@ int main(int argc, char *argv[]) {
 				exit(-1);
 			}
 			buf[n]=0;
-			sn=send(sockfd,(const void *)buf,n,0);
-			if(sn==-1) {
-				perror("send\n");
-				exit(-1);
-			} else if(sn!=n) {
-				fprintf(stderr,"Error, no se enviaron todos los datos?\n");
-				exit(-1);
-			}
+			processdata(sockfd, buf, n);
 			//printf("Dades: %s\n",buf);
-			if(!strncmp(buf,"800\n",n)) {
+			/*if(!strncmp(buf,"800\n",n)) {
 				keep_running=0;
-			}
+			}*/
 			memset(buf,0,sizeof(buf));
 		} else if(FD_ISSET(sockfd,&readfs)) {
 			// Datos recibidos por el socket del servidor
@@ -235,7 +324,7 @@ int main(int argc, char *argv[]) {
 				keep_running=0;
 				continue;
 			}
-			processdata(buf);
+			//processerversdata(buf);
 			buf[numbytes] = '\0';
 			//printf("Received: %s",buf);
 			
