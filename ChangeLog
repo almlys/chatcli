@@ -1,3 +1,43 @@
+2007-03-29 13:00  alberto
+
+	* python/cprotocol.py, python/server.py: より多くの仕事は終った
+
+2007-03-29 12:00  alberto
+
+	* python/server.py, xserver.cpp: Segmentation fault (fcores dumped)
+
+2007-03-29 11:51  alberto
+
+	* python/server.py: License and authors
+
+2007-03-28 23:28  josep
+
+	* Makefile, client.cpp:
+
+2007-03-27 13:50  alberto
+
+	* TODO, xserver.cpp: @_@
+
+2007-03-27 11:26  josep
+
+	* cudp.c, sudp.c:
+
+2007-03-27 10:59  josep
+
+	* TODO:
+
+2007-03-27 10:57  josep
+
+	* client.cpp:
+
+2007-03-27 10:57  josep
+
+	* Makefile, udp, udp/cudp, udp/cudp.c, udp/sudp, udp/sudp.c:
+
+2007-03-27 02:33  alberto
+
+	* ChangeLog: svn2cl :)
+
 2007-03-27 02:32  alberto
 
 	* ChangeLog, TODO, xserver.cpp, xserver.h: Ya tah\!\!\! (el server

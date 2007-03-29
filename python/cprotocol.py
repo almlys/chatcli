@@ -32,7 +32,7 @@ Defines all the pràctica I chat protocol v2.0
 
 __all__ = ["protocol","ClientStatus","ProtocolViolation","HelloAlreadySent"
            ,"NickAlreadyExists","BadFormatedMsg","NoHelloWasSent",
-           "NoRegisterSent","NickNotFound"]
+           "NoRegisterSent","NickNotFound",]
 
 class protocol(object):
     """
@@ -67,10 +67,19 @@ class protocol(object):
 class ClientStatus(object):
     """
     Defines in wich states can be the client
+     new 0 -> New connection, not hallowed yet
+     ident 1 -> Client has been hallowed (HOLA recieved)
+     register 2 -> Client has been hallowed and registered (HOLA and REGISTER
+                   succesfully recieved and not duplicated)
     """
     new=0
     ident=1
     register=2
+
+
+"""
+List of Protocol Violation exceptions
+"""
 
 class ProtocolViolation(Exception): pass
 class HelloAlreadySent(ProtocolViolation): pass

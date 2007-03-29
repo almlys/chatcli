@@ -33,117 +33,21 @@ Xarxes II
 Implementació d'un petit servidor de chat
 
 Execució:
-./server.py [-p 8642] [-b 10] [-D] [-b 4096] [-nw]
+./server.py [-p 8642] [-b 10] [-D] [-buf 4096] [-nw]
 -p <port>: Select a diferent listenning tcp port (default 8642)
 -b <backlog: Set how many pending connections the queue will hold
 -D Daemon mode
--b <size>: Sets the incomming buffer size
+-buf <size>: Sets the incomming buffer size
 -nw: Forbides spaces in the nicknames (default are enabled)
+-bind <address>: Sets the address to bind (default 0 = all available addresses on all interfaces)
 """
+
+# TODO: Will be nice to Allow to bind to an specific interface, for those machines with multiple interfaces.
 
 import socket
 from netcommon import selectInterface
 from cprotocol import *
-
-
-class clientSession(object):
-
-    def __init__(self,conn,addr):
-        print "Connection from %s:%s" % (addr)
-        self.addr = addr
-        self.conn = conn
-        self.status = ClientStatus.new
-        self.name = None
-
-    def fileno(self):
-        return self.conn.fileno()
-
-    def send(self,msg):
-        self.conn.sendall(msg)
-
-    def senderror(self,msg=""):
-        #self.conn.sendall("200 %s\n" %msg)
-        self.conn.sendall(protocol.error + protocol.sep)
-
-    def sendOk(self,msg=""):
-        #self.conn.sendall("100 %s\n" %msg)
-        self.conn.sendall(protocol.ok + protocol.sep)
-
-    def sendanswer(self,msg=""):
-        #self.conn.sendall("100 %s\n" %msg)
-        self.conn.sendall(protocol.answer + " " + msg + protocol.sep)
-
-    def rcvHello(self):
-        if self.status!=ClientStatus.new:
-            raise HelloAlreadySent
-        else:
-            self.status=ClientStatus.ident
-
-    def setName(self,name):
-        self.name = name
-        self.status=ClientStatus.register
-
-    def getName(self):
-        return self.name
-
-    def helloCheck(self):
-        if self.status==ClientStatus.new:
-            raise NoHelloWasSent
-
-    def registerCheck(self):
-        if self.status!=ClientStatus.register:
-            raise NoRegisterSent,"No register was sent"
-
-    def isRegistered(self):
-        return self.status==ClientStatus.register
-
-class sessionMGR(object):
-
-    clients = {}
-    nicks = {}
-
-    def __init__(self,parent):
-        self.parent = parent
-
-    def add(self,conn,addr):
-        cli = clientSession(conn,addr)
-        if self.clients.has_key(addr):
-            self.parent.select.unregister(self.clients[addr])
-            name=self.clients[addr].getName()
-            if name!=None and self.nicks.has_key(name):
-                del self.nicks[name]
-            del self.clients[addr]
-        self.clients[addr] = cli
-        self.parent.select.register(cli)
-        return cli
-
-    def remove(self,client):
-        print "Connection %s:%s was closed" %(client.addr)
-        client.conn.close()
-        self.parent.select.unregister(client)
-        if client.getName()!=None:
-            self.parent.broadcast("%s has left the chat" %(client.getName(),),client)
-            del self.nicks[client.getName()]
-        del self.clients[client.addr]
-
-    def register(self,client,name):
-        client.helloCheck()
-        if self.nicks.has_key(name):
-            raise NickAlreadyExists
-        if client.getName()!=None and self.nicks.has_key(client.getName()):
-            del self.nicks[client.getName()]
-            self.parent.broadcast("%s is now know as %s" %(client.getName(),name),client)
-        else:
-            self.parent.broadcast("%s has joined the chat" %(name,),client)
-        self.nicks[name] = client
-        client.setName(name)
-
-    def findAddress(self,name):
-        if self.nicks.has_key(name):
-            return self.nicks[name].addr[0]
-        else:
-            #raise NickNotFound
-            return "null"
+from sessionMGR import sessionMGR, clientSession
 
 
 class server(object):
