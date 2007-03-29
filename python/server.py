@@ -35,9 +35,9 @@ Implementació d'un petit servidor de chat
 Execució:
 ./server.py [-p 8642] [-b 10] [-D] [-buf 4096] [-nw]
 -p <port>: Select a diferent listenning tcp port (default 8642)
--b <backlog: Set how many pending connections the queue will hold
+-b <backlog: Set how many pending connections the queue will hold (default 10)
 -D Daemon mode
--buf <size>: Sets the incomming buffer size
+-buf <size>: Sets the incomming buffer size (default 4096)
 -nw: Forbides spaces in the nicknames (default are enabled)
 -bind <address>: Sets the address to bind (default 0 = all available addresses on all interfaces)
 """
@@ -51,6 +51,9 @@ from sessionMGR import sessionMGR, clientSession
 
 
 class server(object):
+    """
+    The server
+    """
 
     keep_running = True
     bufferSize = 4096
@@ -58,15 +61,31 @@ class server(object):
     shutting_down = False
     allowwhitespaces = True
 
-    def __init__(self,lhost="",lport=8642,backlog=10):
+    def __init__(self,lhost="",lport=8642,backlog=10,bufsize=4096,nw=True,easter_egg=0xf):
+        """
+        Constructor
+        @param lhost Bind address (default all)
+        @param lport Bind port (default 8642)
+        @param backlog Set how many pending connections the queue will hold (default 10)
+        @param bufsize Sets the incomming buffer size (default 4096)
+        @param nw Allow whitespaces in the nicknames (default True)
+        @param easter_egg I cannot say what this does, it's an easter egg, so play with it :)
+        """
         self.socket=None
         self.initialized=False
         self.setBindAddress(lhost,lport)
         self.backlog=backlog
+        self.bufferSize = bufsize
+        self.nw = nw
+        self.shutdowncount = easter_egg
         self.clients = sessionMGR(self)
 
     def setBindAddress(self,lhost,lport):
-        """ Sets the server bind address (adress/port) pair """
+        """
+        Sets the server bind address (adress/port) pair
+        @param lhost Bind address
+        @param lport Bind Port
+        """
         self.bindAddr=lhost
         self.bindPort=lport
 
@@ -88,11 +107,27 @@ class server(object):
         self.select.register(self.socket)
         
     def stopOp(self):
-        self.socket.close()
+        """
+        Destroys the socket
+        """
+        # this forces a close() to be done by all clients
+        # Python automatically calls close, when the socket reference count gets to 0
+        # with this del, we force the destruction of the sessionMGR, reducing the reference
+        # count of all clients sockets to 0, invoking the implicit socket.close() call inside
+        # the destructor. very nice for python, but in the C++ version, we must do this in a manual
+        # way (remember that C++ lacks of a garbage collector)
+        del self.clients
+        self.socket.close() # this is not really necessary, the del statement will call close
         del self.socket
         self.initialized=False
 
     def broadcast(self,msg,client=None):
+        """
+        Sends a broadcast message to all connected clients, who are in the registered status
+        The other clients, will not be notified
+        @param msg Message to sent
+        @param client Client to ignore in the broadcast (this is useful for ignoring messages originating from that client)
+        """
         for key in self.clients.clients:
             try:
                 cli = self.clients.clients[key]
@@ -106,6 +141,9 @@ class server(object):
 
 
     def requestLoop(self):
+        """
+        Request main LOOP
+        """
         read, write, excp = self.select.wait()
             
         for client in read:
@@ -121,6 +159,11 @@ class server(object):
                 self.processRequest(client,data)
 
     def processRequest(self,client,data):
+        """
+        Process a client request
+        @param client Client object who has sent the request
+        @param data Raw data recieved from the client
+        """
         print "From %s:%s" %(client.addr)
         #print data,
 
@@ -186,12 +229,20 @@ class server(object):
             traceback.print_exc(file=sys.stderr)            
 
     def run(self):
+        """
+        Starts the server Main Loop
+        """
         self.startOp()
         while(self.keep_running):
             self.requestLoop()
         self.stopOp()
 
     def signalHandler(self,num,frame):
+        """
+        Handles some signals
+        @param num Signal number
+        @param frame Current stack frame
+        """
         import signal
         if num==signal.SIGUSR1:
             signal.signal(num,self.signalHandler)
@@ -232,6 +283,10 @@ class server(object):
                 sys.exit()
 
     def installSignalHandlers(self):
+        """
+        Installs all those nice shiny signal handlers
+        Mainly to avoid that hateful "KeyboradInterrupt" exception
+        """
         import signal
         signal.signal(signal.SIGTERM, self.signalHandler)
         signal.signal(signal.SIGINT, self.signalHandler)
@@ -240,6 +295,9 @@ class server(object):
 
 
 def main():
+    """
+    Main entry point
+    """
     try:
         srv=server()
         srv.run()
