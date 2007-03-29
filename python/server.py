@@ -165,7 +165,7 @@ class server(object):
         @param data Raw data recieved from the client
         """
         print "From %s:%s" %(client.addr)
-        #print data,
+        print "->%s<-" %(data,)
 
         msg = data.strip() #Esto se carga el \n y el famoso \r que tanto le preocupa al profe
         try:

@@ -128,7 +128,8 @@ int processdata(int sock, char * buf, int n) {
 	} else {
 		cout<<"Enviem el privat..."<<endl;
 		cout<<"Primer solicitem ip desti..."<<endl;
-		sprintf(buf,"400 %s", str1.c_str());
+		sprintf(buf,"400 %s\0", str1.c_str());
+		n=strlen(buf);
 		if((sn=send(sock,(const void *)buf,n,0))==-1) {
 			perror("send\n");
 			exit(-1);
@@ -230,11 +231,13 @@ int main(int argc, char *argv[]) {
 	}
 
 	cout<<"Identifikem"<<endl;
-	sprintf(buf,"HOLA\0");
-	if((sn=send(sockfd,(const void *)buf,5,0))==-1) {
+	memset(buf,0,sizeof(buf));
+	sprintf(buf,"HOLA");
+  n=strlen(buf);
+	if((sn=send(sockfd,(const void *)buf,n,0))==-1) {
 		perror("send\n");
 		exit(-1);
-	} else if(sn!=5) {
+	} else if(sn!=n) {
 		fprintf(stderr,"Error, no se enviaron todos los datos?\n");
 		exit(-1);
 	}
@@ -254,7 +257,7 @@ int main(int argc, char *argv[]) {
 
 	cout<<"Registrem"<<endl;
 	sprintf(buf,"300 %s\0", user.c_str());
-	n=sizeof(buf);
+	n=strlen(buf);
 	if((sn=send(sockfd,(const void *)buf,n,0))==-1) {
 		perror("send\n");
 		exit(-1);
