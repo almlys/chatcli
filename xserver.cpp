@@ -17,7 +17,7 @@
 //End hate list
 
 //Protocol stuff
-const char * protocol::sep="\r\n";
+const char * protocol::sep="\x0D\x0A";
 // "\n" *nix systems
 // "\r" Old Mac systems
 // "\r\n" Hasecorp Hasefroch systems

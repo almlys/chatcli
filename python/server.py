@@ -26,6 +26,20 @@
 #    Please see the file COPYING for the full license.
 #
 
+"""
+Pràctica I
+Xarxes II
+
+Implementació d'un petit servidor de chat
+
+Execució:
+./server.py [-p 8642] [-b 10] [-D] [-b 4096] [-nw]
+-p <port>: Select a diferent listenning tcp port (default 8642)
+-b <backlog: Set how many pending connections the queue will hold
+-D Daemon mode
+-b <size>: Sets the incomming buffer size
+-nw: Forbides spaces in the nicknames (default are enabled)
+"""
 
 import socket
 import netcommon
