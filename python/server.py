@@ -42,36 +42,9 @@ Execució:
 """
 
 import socket
-import netcommon
 from netcommon import selectInterface
+from cprotocol import *
 
-class protocol(object):
-    sep="\r\n"
-    # "\n" *nix systems
-    # "\r" Old Mac systems
-    # "\r\n" Hasecorp Hasefroch systems
-    ok="100"
-    error="200"
-    helo="HOLA"
-    register="300"
-    query="400"
-    answer="500"
-    pm="600"
-    bcast="700"
-    exit="800"
-
-class ClientStatus(object):
-    new=0
-    ident=1
-    register=2
-
-class ProtocolViolation(Exception): pass
-class HelloAlreadySent(ProtocolViolation): pass
-class NickAlreadyExists(ProtocolViolation): pass
-class BadFormatedMsg(ProtocolViolation): pass
-class NoHelloWasSent(ProtocolViolation): pass
-class NoRegisterSent(ProtocolViolation): pass
-class NickNotFound(ProtocolViolation): pass
 
 class clientSession(object):
 
