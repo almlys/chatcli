@@ -1,0 +1,22 @@
+** Práctica 1 Chat Client/Server Python Version **
+==================================================
+
+* Requirements *
+================
+* G++ compiler with all standard libraries
+* Linux compatible OS
+
+* Compile/Build the server *
+============================
+Just type: make all
+
+* Running the server *
+======================
+
+To run the server just type: ./server
+
+* Running the client *
+======================
+
+To run the client just type: ./client
+

@@ -1,3 +1,33 @@
+2007-03-30 01:53  alberto
+
+	* python/AUTHORS, python/COPYING: copying and authors
+
+2007-03-30 01:50  alberto
+
+	* python/BaseApp.py, python/sdlogger.py: wip
+
+2007-03-30 01:48  alberto
+
+	* python/README: juas
+
+2007-03-30 01:44  alberto
+
+	* python/TODO, python/daemon.py, python/server.py,
+	  python/sessionMGR.py: cleaned
+
+2007-03-29 17:29  alberto
+
+	* client.cpp, python/server.py: #
+
+2007-03-29 14:25  alberto
+
+	* python/server.py: より多くの仕事は終った
+
+2007-03-29 13:48  alberto
+
+	* ChangeLog, python/cprotocol.py, python/netcommon.py,
+	  python/server.py, python/sessionMGR.py: より多くの仕事は終った
+
 2007-03-29 13:00  alberto
 
 	* python/cprotocol.py, python/server.py: より多くの仕事は終った
