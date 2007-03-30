@@ -10,7 +10,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-#include "xserver.h"
+#include "server.h"
 
 //I really hate this, pero no buscamos finezas
 #define MAXDATASIZE 4096

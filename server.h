@@ -1,5 +1,5 @@
-#ifndef XSERVER_H
-#define XSERVER_H
+#ifndef SERVER_H
+#define SERVER_H
 
 //Data types
 typedef unsigned char Byte;
