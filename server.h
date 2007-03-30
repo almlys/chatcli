@@ -71,10 +71,10 @@ public:
 	/// Netcore end sequence
 	void stopOp();
 	
-	/// Requeste loop stuff, Main aplication loop
+	/// Request loop stuff, Main aplication loop
 	void requestLoop();
 	
-	/// Runs the Main aplication run
+	/// Runs the Main aplication loop
 	void run();
 
 	/// Process a single request
