@@ -1,29 +1,51 @@
-/*
-** client.c -- a stream socket client demo
-*/
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <errno.h>
-#include <string.h>
-#include <netdb.h>
-#include <sys/types.h>
-#include <netinet/in.h>
-#include <sys/socket.h>
-
-#include <string>
+/******************************************************************************
+* $Revision$                                                            *
+*                                                                             *
+*    Copyright (C) 2007 Ignasi Barri Vilardell                                *
+*    Copyright (C) 2007 Alberto Montañola Lacort                              *
+*    Copyright (C) 2007 Josep Rius Torrento                                   *
+*    See the file AUTHORS for more info                                       *
+*                                                                             *
+*    This program is free software; you can redistribute it and/or modify     *
+*    it under the terms of the GNU General Public License as published by     *
+*    the Free Software Foundation; either version 2 of the License, or        *
+*    (at your option) any later version.                                      *
+*                                                                             *
+*    This program is distributed in the hope that it will be useful,          *
+*    but WITHOUT ANY WARRANTY; without even the implied warranty of           *
+*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            *
+*    GNU General Public License for more details.                             *
+*                                                                             *
+*    You should have received a copy of the GNU General Public License        *
+*    along with this program; if not, write to the Free Software              *
+*    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA            *
+*    02110-1301,USA.                                                          *
+*                                                                             *
+*    Please see the file COPYING for the full license.                        *
+*                                                                             *
+*******************************************************************************
+*                                                                             *
+* Xarxes II                                                                   *
+* Màster en Enginyeria de Programari Lliure                                   *
+*                                                                             *
+* Pràctica I                                                                  *
+*                                                                             *
+******************************************************************************/
 #include <iostream>
+#include <string>
+
+#include <errno.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <netdb.h>
 
 using namespace std;
 
 #define PORT 8642 // the port client will be connecting to 
 #define UDP_PORT 7766 // udp p2p port
 
-#define MAXDATASIZE 100 // max number of bytes we can get at once 
-#define BUFFER_LEN 1024
-
-#define AQ { printf("Estoy aquí: %s,%i,%s\n",__FILE__,__LINE__,__FUNCTION__); }
+#define MAXDATASIZE 1025 // max number of bytes we can get at once 
 
 /// Show client usage information
 void help(void) {
@@ -36,13 +58,12 @@ void help(void) {
 }
 
 /// Send message with udp
-int sendudp(char * buf, string str) {
-	int len, sn;
+int sendudp(char * buf, char * msg) {
+	int len;
 	len=strlen(buf)-1;
 	while (buf[len]=='\n' || buf[len]=='\r') {
 		buf[len--]='\0';
 	}
-	//printf("Processing request: %s<-\n",buf);
 	string req=buf;
 	string cmd;
 	string data;
@@ -57,8 +78,6 @@ int sendudp(char * buf, string str) {
 	cout<<"Processing request, command: "<<cmd<<",data: "<<data<<endl;
 	const char * ip=NULL;
 	if(data!="") ip=data.c_str();
-	const char * msg=NULL;
-	if(str!="") msg=str.c_str();
 	
 	if(cmd=="500") { //Identificacio
 		cout<<"Intentat enviar missatge privat..."<<endl;
@@ -128,8 +147,8 @@ char * processmsg(int sock, char * buf){
 }
 
 /// Process recived data of the user
-int processdata(int sock, char * buf, int n) {
-	int len, sn;
+unsigned char processdata(int sock, char * buf) {
+	int len;
 	len=strlen(buf)-1;
 	while (buf[len]=='\n' || buf[len]=='\r') {
 		buf[len--]='\0';
@@ -152,21 +171,21 @@ int processdata(int sock, char * buf, int n) {
 		help();
 	} else if(str1=="salir"){
 		cout<<"Cerrando..."<<endl;
-		exit(0);
+		return 0;
 	} else if(str1=="all"){
-		cout<<"Enviem a tothom..."<<endl;
+		cout<<"Enviamos a todos..."<<endl;
 		sprintf(buf,"700 %s", str2.c_str());
 		sendmsg(sock,buf);
-	} else {
-		cout<<"Enviem el privat..."<<endl;
-		cout<<"Primer solicitem ip desti..."<<endl;
-		sprintf(buf,"400 %s\0", str1.c_str());
+	} else { //DUBTE
+		cout<<"Enviamos el privado..."<<endl;
+		memset(buf,0,sizeof(buf));
+		sprintf(buf,"400 %s", str1.c_str());
 		sendmsg(sock, buf);
 		buf=processmsg(sock, buf);
 		cout<<buf<<endl;
-		sendudp(buf, str2);
+		sendudp(buf, (char *) str2.c_str());
 	}
-	return 0;
+	return 1;
 }
 
 
@@ -187,7 +206,6 @@ int startupc(){
 	bzero(&(my_addr.sin_zero), 8); /* rellena con ceros el resto de la estructura */
 
 	/* Se le da un nombre al socket (se lo asocia al puerto e IPs) */
-	printf("Creando socket ....\n");
 	if (bind(sockudp, (struct sockaddr *)&my_addr, sizeof(struct sockaddr)) == -1) {
 		perror("bind");
 		exit(1);
@@ -197,14 +215,12 @@ int startupc(){
 
 
 int main(int argc, char *argv[]) {
-	int fdmax;
-	int sockfd, numbytes;
+	int sockfd, sockudp, fdmax, numbytes;
 	char buf[MAXDATASIZE];
 	struct hostent *he;
 	struct sockaddr_in their_addr; // connector's address information 
 
 	unsigned char keep_running=1;
-	int n,sn;
 	fd_set readfs;
 	fd_set master;
 
@@ -217,25 +233,17 @@ int main(int argc, char *argv[]) {
 	const char * ip=NULL;
 	if(ips!="") ip=ips.c_str();
 
-
 	if ((he=gethostbyname(ip)) == NULL) {  // get the host info 
 	    perror("gethostbyname");
 	    exit(-1);
 	}
 
-	struct sockaddr_in their_addr_udp; /* direccion IP y numero de puerto del cliente */
-	/* addr_len contendra el tamanio de la estructura sockadd_in y numbytes el
-	 * numero de bytes recibidos
-	 */
-	int sockudp;
-	char buffer[BUFFER_LEN]; /* Buffer de recepci� */
-	sockudp = startupc();
-
-
 	if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
 	    perror("socket");
 	    exit(-1);
 	}
+
+	sockudp = startupc();
 
 	their_addr.sin_family = AF_INET;    // host byte order 
 	their_addr.sin_port = htons(PORT);  // short, network byte order 
@@ -258,14 +266,14 @@ int main(int argc, char *argv[]) {
 	}
 
 	cout<<"Registrem"<<endl;
-	sprintf(buf,"300 %s\0", user.c_str());
+	memset(buf,0,sizeof(buf));
+	sprintf(buf,"300 %s", user.c_str());
 	sendmsg(sockfd, buf);
 	strcmp(buf,processmsg(sockfd,buf));
 	if(!strncmp(buf,"100",3)){
 		cout<<"Registrats correctament"<<endl;
 	}
 	
-
 	FD_ZERO(&readfs); //Inicializar
 	FD_ZERO(&master);
 
@@ -273,7 +281,7 @@ int main(int argc, char *argv[]) {
 	FD_SET(sockfd,&master); //Fijar el socket
 	FD_SET(sockudp,&master);
 
-	fdmax = sockfd;
+	fdmax = sockudp;
 
 	while(keep_running) {
 		readfs=master;
@@ -281,23 +289,18 @@ int main(int argc, char *argv[]) {
 			perror("select");
 			exit(-1);
 		}
-
 		if(FD_ISSET(0,&readfs)) {
 			//Datos recibidos por la entrada estandar
-			n=read(0,(void *)buf,MAXDATASIZE-1);
-			if(n==0) {
+			numbytes=read(0,(void *)buf,MAXDATASIZE-1);
+			if(numbytes==0) {
 				fprintf(stderr,"Error, se leyeron 0 datos?\n");
 				exit(-1);
-			} else if(n==-1) {
+			} else if(numbytes==-1) {
 				perror("read");
 				exit(-1);
 			}
-			buf[n]=0;
-			processdata(sockfd, buf, n);
-			//printf("Dades: %s\n",buf);
-			/*if(!strncmp(buf,"800\n",n)) {
-				keep_running=0;
-			}*/
+			buf[numbytes]=0;
+			keep_running = processdata(sockfd, buf);
 			memset(buf,0,sizeof(buf));
 		} else if(FD_ISSET(sockfd,&readfs)) {
 			// Datos recibidos por el socket del servidor
@@ -310,31 +313,26 @@ int main(int argc, char *argv[]) {
 				keep_running=0;
 				continue;
 			}
-			//processerversdata(buf);
 			buf[numbytes] = '\0';
-			//printf("Received: %s",buf);
-			
+		
 		}  else if(FD_ISSET(sockudp,&readfs)) {
 			/* Se reciben los datos (directamente, UDP no necesita conexi�) */
 			socklen_t addr_len = sizeof(struct sockaddr);
 			printf("Esperando datos ....\n");
-			if ((numbytes=recvfrom(sockudp, buffer, BUFFER_LEN, 0, (struct sockaddr *)&their_addr_udp, &addr_len)) == -1) {
+			if ((numbytes=recvfrom(sockudp, buf, MAXDATASIZE-1, 0, (struct sockaddr *)&their_addr, &addr_len)) == -1) {
 				perror("recvfrom");
 				exit(1);
 			}
-		
 			/* Se visualiza lo recibido */
-			//printf("paquete proveniente de : %s\n",inet_ntoa(their_addr_udp.sin_addr));
-			printf("longitud del paquete en bytes : %d\n",numbytes);
-			buffer[numbytes] = '\0';
-			printf("el paquete contiene : %s\n", buffer);
+			buf[numbytes] = '\0';
+			printf("%s: %s\n",inet_ntoa(their_addr.sin_addr), buf);
 		} else {
 			cout<<"Datos recibidos por otro descriptor, o se produjo alguna señal."<<endl;
 		}
-
 	}
 
 	close(sockfd);
+	close(sockudp);
 
 	return 0;
 }
