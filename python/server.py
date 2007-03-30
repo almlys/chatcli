@@ -56,10 +56,7 @@ class server(object):
     """
 
     keep_running = True
-    bufferSize = 4096
-    shutdowncount = 15
     shutting_down = False
-    allowwhitespaces = True
 
     def __init__(self,lhost="",lport=8642,backlog=10,bufsize=4096,nw=True,easter_egg=0xf):
         """
@@ -76,7 +73,7 @@ class server(object):
         self.setBindAddress(lhost,lport)
         self.backlog=backlog
         self.bufferSize = bufsize
-        self.nw = nw
+        self.allowwhitespaces = nw
         self.shutdowncount = easter_egg
         self.clients = sessionMGR(self)
 
@@ -156,18 +153,43 @@ class server(object):
                 if len(data)==0:
                     self.clients.remove(client)
                     continue
-                self.processRequest(client,data)
+                # Las famosas lecturas parciales que dan tantos quebraderos de cabeza
+                # Concatenate a previus incompleted message, with the following data
+                data = client.partialData + data
+                client.partialData = ""
+                for req in data.splitlines(True):
+                    ok_sep=False
+                    for k in protocol.sep:
+                        if req.endswith(k):
+                            ok_sep=True
+                    if not ok_sep:
+                        # No se han recibido todos los datos!!!
+                        client.partialData = req
+                        break
+                    if 1:
+                        telnet_garbage="\xFF\xFD\x01\x02\x03"
+                    else:
+                        telnet_garbage=""
+                    req = req.strip("\x00 \t" + protocol.sep + telnet_garbage)
+                    #Esto se carga el \n y el famoso \r que tanto le preocupa al profe
+                    # El 0x00, es para que nuestro server funcione con algunas implementaciones
+                    # mal hechas, que envian ristras de zeros despues del mensaje
+                    #if len(req)==0: continue
+                    #Ingnorar el protocolo telnet
+                    ##if req.startswith("\xFF\xFD"):
+                    ##    print req
+                    ##    continue
+                    self.processRequest(client,req)
 
-    def processRequest(self,client,data):
+    def processRequest(self,client,msg):
         """
         Process a client request
         @param client Client object who has sent the request
         @param data Raw data recieved from the client
         """
         print "From %s:%s" %(client.addr)
-        print "->%s<-" %(data,)
+        print "->%s<-" %(msg,)
 
-        msg = data.strip() #Esto se carga el \n y el famoso \r que tanto le preocupa al profe
         try:
             cmd, data = msg.split(' ',1)
         except ValueError:
@@ -176,29 +198,25 @@ class server(object):
         try:
             print "processing cmd: %s, data: %s" %(cmd,data)
 
-            if cmd==protocol.helo:
+            if len(data)!=0:
+                if self.allowwhitespaces:
+                    nick = data
+                else:
+                    nick = data.split()
+                    nick = nick[0]
+            else:
+                nick=""
+
+            if cmd==protocol.helo and not client.isHallowed():
                 client.rcvHello()
                 client.sendOk("OK %s:%s" % (client.addr))
-            elif cmd==protocol.register:
-                if self.allowwhitespaces:
-                    nick = data
-                else:
-                    nick, = data.split()
-                if len(nick)==0:
-                    raise BadFormatedMsg
+            elif (client.isHallowed() or client.isRegistered()) \
+                 and len(nick)!=0 and cmd==protocol.register:
                 self.clients.register(client,nick)
                 client.sendOk()
-            elif cmd==protocol.query:
-                if self.allowwhitespaces:
-                    nick = data
-                else:
-                    nick, = data.split()
-                if len(nick)==0:
-                    raise BadFormatedMsg
-                client.helloCheck()
+            elif client.isRegistered() and len(nick)!=0 and cmd==protocol.query:
                 client.sendanswer("%s" %(self.clients.findAddress(nick)))
-            elif cmd==protocol.bcast:
-                client.registerCheck()
+            elif client.isRegistered() and cmd==protocol.bcast:
                 author=client.name
                 self.broadcast(author + " says: " + data,client)
                 client.sendOk("OK")
@@ -294,15 +312,81 @@ class server(object):
         signal.signal(signal.SIGALRM, self.signalHandler)
 
 
+def usage():
+    """
+    Prints some usage useful, nice help
+    """
+    import sys
+    print """%s [-p 8642] [-b 10] [-D] [-buf 4096] [-nw]
+-p <port>: Select a diferent listenning tcp port (default 8642)
+-b <backlog: Set how many pending connections the queue will hold (default 10)
+-D Daemon mode
+-buf <size>: Sets the incomming buffer size (default 4096)
+-nw: Forbides spaces in the nicknames (default are enabled)
+-bind <address>: Sets the address to bind (default 0 = all available addresses on all interfaces)""" %(sys.argv[0])
+
+def parse_args():
+    """
+    Parses some command line arguments
+    """
+    config={"daemon" : False, "port" : 8642, "backlog" : 10, "buf" : 4096, "nw" : True, "bind" : "", "egg" : 0xf}
+    import sys
+    n=len(sys.argv)
+    i=1
+    while i<n:
+        arg=sys.argv[i]
+        if arg=="-h" or arg=="--help":
+            usage()
+            sys.exit(0)
+        elif arg=="-D":
+            config["daemon"]=True
+        elif arg=="-p" and i+1<n:
+            i+=1
+            config["port"]=int(sys.argv[i])
+        elif arg=="-b" and i+1<n:
+            i+=1
+            config["backlog"]=int(sys.argv[i])
+        elif arg=="-buf" and i+1<n:
+            i+=1
+            config["buf"]=int(sys.argv[i])
+        elif arg=="-nw":
+            config["nw"]=not config["nw"]
+        elif arg=="-bind" and i+1<n:
+            i+=1
+            config["bind"]=sys.argv[i]
+        elif arg=="+egg" and i+1<n:
+            i+=1
+            config["egg"]=sys.argv[i]
+        else:
+            print "Warning: Ignoring unkown command line param %s" % (arg,)
+            #usage()
+            #sys.exit(0)
+        i+=1
+    return config
+
+
 def main():
     """
     Main entry point
     """
     try:
-        srv=server()
+        config=parse_args()
+        if config["daemon"]:
+            from daemon import daemon
+            daemon()
+        srv=server(config["bind"],config["port"],config["backlog"],config["buf"],config["nw"],config["egg"])
+        print """
+\033[0;36m/***************************************************************\\
+|                IgAlJo python server starting...               |
+\\***************************************************************/\033[0m
+        """
+        print "Presh Ctrl+C to stop execution, or send a SIGUSR1 signal to have some fun"
         srv.run()
+    except SystemExit:
+        pass
     except: # Esto es el control de errores, que más quieres!??
         import traceback,sys
+        print "Cannot start the server due to an error: Check the traceback!!"
         trace=file("traceback.log","w")
         traceback.print_exc(file=trace)
         trace.close()

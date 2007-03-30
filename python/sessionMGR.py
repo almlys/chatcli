@@ -41,6 +41,8 @@ class clientSession(object):
     Holds client related data to its session
     """
 
+    partialData = ""
+
     def __init__(self,conn,addr):
         """
         Session constructor
@@ -114,6 +116,15 @@ class clientSession(object):
         @return the nickname
         """
         return self.name
+
+    def isHallowed(self):
+        """
+        Checks if hello was sent
+        @returns True if hello was sent
+        """
+        if self.status==ClientStatus.ident:
+            return True
+        return False
 
     def helloCheck(self):
         """
