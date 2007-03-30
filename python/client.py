@@ -45,10 +45,10 @@ class client(object):
         self.tcpsocket=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.tcpsocket.connect(address)
         self.select.register(self.tcpsocket)
-        self.tcpsocket.sendall("HELO\n")
+        self.tcpsocket.sendall("HOLA\n")
 
     def setNick(self,nick):
-        self.tcpsocket.sendall("REGISTER %s\n" %nick)
+        self.tcpsocket.sendall("300 %s\n" %nick)
         
     def stopOp(self):
         self.udpsocket.close()
@@ -91,7 +91,7 @@ class client(object):
         self.stopOp()
 
     def usershutdown(self):
-        self.tcpsocket.sendall("EXIT\n")
+        self.tcpsocket.sendall("800\n")
 
     def processUserInput(self,msg):
         try:
@@ -101,8 +101,8 @@ class client(object):
             data = ""
         if cmd=="exit":
             self.usershutdown()
-        elif cmd=="all" and len(data)!=0:
-            self.tcpsocket.sendall("BCAST " + data + "\n")
+        elif cmd=="todos" and len(data)!=0:
+            self.tcpsocket.sendall("700 " + data + "\n")
         if len(data)==0:
             if cmd=="help":
                 print """

@@ -58,7 +58,7 @@ void help(void) {
 }
 
 /// Send message with udp
-int sendudp(char * buf, char * msg) {
+int sendudp(char * buf, char * msg,int sockfdudp) {
 	int len;
 	len=strlen(buf)-1;
 	while (buf[len]=='\n' || buf[len]=='\r') {
@@ -82,7 +82,6 @@ int sendudp(char * buf, char * msg) {
 	if(cmd=="500") { //Identificacio
 		cout<<"Intentat enviar missatge privat..."<<endl;
 		if (data!="null") {
-			int sockfdudp; /* descriptor a usar con el socket */
 			struct sockaddr_in their_addr_udp; /* almacenara la direccion IP y numero de puerto del servidor */
 			struct hostent *he_udp; /* para obtener nombre del host */
 			int numbytes; /* conteo de bytes a escribir */
@@ -93,10 +92,10 @@ int sendudp(char * buf, char * msg) {
 			}
 		
 			/* Creamos el socket */
-			if ((sockfdudp = socket(AF_INET, SOCK_DGRAM, 0)) == -1) {
+		/*	if ((sockfdudp = socket(AF_INET, SOCK_DGRAM, 0)) == -1) {
 				perror("socket");
 				exit(1);
-			}
+			}*/
 		
 			/* a donde mandar */
 			their_addr_udp.sin_family = AF_INET; /* usa host byte order */
@@ -147,7 +146,7 @@ char * processmsg(int sock, char * buf){
 }
 
 /// Process recived data of the user
-unsigned char processdata(int sock, char * buf) {
+unsigned char processdata(int sock, char * buf,int sockudp) {
 	int len;
 	len=strlen(buf)-1;
 	while (buf[len]=='\n' || buf[len]=='\r') {
@@ -172,7 +171,7 @@ unsigned char processdata(int sock, char * buf) {
 	} else if(str1=="salir"){
 		cout<<"Cerrando..."<<endl;
 		return 0;
-	} else if(str1=="all"){
+	} else if(str1=="todos"){
 		cout<<"Enviamos a todos..."<<endl;
 		sprintf(buf,"700 %s", str2.c_str());
 		sendmsg(sock,buf);
@@ -183,7 +182,7 @@ unsigned char processdata(int sock, char * buf) {
 		sendmsg(sock, buf);
 		buf=processmsg(sock, buf);
 		cout<<buf<<endl;
-		sendudp(buf, (char *) str2.c_str());
+		sendudp(buf, (char *) str2.c_str(),sockudp);
 	}
 	return 1;
 }
@@ -260,7 +259,7 @@ int main(int argc, char *argv[]) {
 	memset(buf,0,sizeof(buf));
 	sprintf(buf,"HOLA");
 	sendmsg(sockfd, buf);
-	strcmp(buf,processmsg(sockfd,buf));
+	strcpy(buf,processmsg(sockfd,buf));
 	if(!strncmp(buf,"100",3)){
 		printf("Identificats correctament\n");
 	}
@@ -269,7 +268,7 @@ int main(int argc, char *argv[]) {
 	memset(buf,0,sizeof(buf));
 	sprintf(buf,"300 %s", user.c_str());
 	sendmsg(sockfd, buf);
-	strcmp(buf,processmsg(sockfd,buf));
+	strcpy(buf,processmsg(sockfd,buf));
 	if(!strncmp(buf,"100",3)){
 		cout<<"Registrats correctament"<<endl;
 	}
@@ -300,7 +299,7 @@ int main(int argc, char *argv[]) {
 				exit(-1);
 			}
 			buf[numbytes]=0;
-			keep_running = processdata(sockfd, buf);
+			keep_running = processdata(sockfd, buf,sockudp);
 			memset(buf,0,sizeof(buf));
 		} else if(FD_ISSET(sockfd,&readfs)) {
 			// Datos recibidos por el socket del servidor
