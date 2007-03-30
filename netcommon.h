@@ -31,68 +31,36 @@
 * Pràctica I                                                                  *
 *                                                                             *
 ******************************************************************************/
-#ifndef PROTOCOL_H
-#define PROTOCOL_H
+#ifndef NETCOMMON_H
+#define NETCOMMON_H
 
 /*
- Defines all the pràctica I chat protocol v2.0
- Please see cprotocol.py as a reference for reading this file
+	Common stuff for the server/client aplications
+	Please see netcommon.py as a reference for this file
 */
 
-//Some commonly used Data types
-typedef unsigned char Byte;
-typedef unsigned short int U16;
-typedef unsigned int U32;
-
-/// Chat Protocol v2.0
-namespace protocol {
-	extern const char * sep;
-	extern const char * ok;
-	extern const char * error;
-	extern const char * helo;
-	extern const char * register2;
-	extern const char * query;
-	extern const char * answer;
-	extern const char * pm;
-	extern const char * bcast;
-	extern const char * exit;
-};
-
-/** Define client states
-    Defines in wich states can be the client
-     new 0 -> New connection, not hallowed yet
-     ident 1 -> Client has been hallowed (HOLA recieved)
-     register 2 -> Client has been hallowed and registered (HOLA and REGISTER
-                   succesfully recieved and not duplicated)
-*/
-enum ClientStatus { kNew=0, kIdent=1, kRegister=2 };
-
-
-/// Encapsulate errors into this exception
-class errorException: public std::exception {
+/// This class registers descriptors to be monitored for reads
+/// Note, this implementation can register only the file descriptors when 
+/// the python implementation allows to register any object associated to a file 
+/// descriptor.
+class selectInterface {
 private:
-	int _errno;
-	const char * _in;
+	fd_set _master;
+	fd_set _readfs;
+	int _fdmax;
+	std::queue<int> _descs;
 public:
 	/// Constructor
-	/// @param in Some text (eg, function name)
-	errorException(const char * in);
-	/// Returns a pointer to a char buffer with some info about what the hell is going on
-	/// @return Error descritive text
-	virtual const char * what() const throw();
-};
-
-/// Defines a protocol Violation
-class protocolViolation: public std::exception {
-private:
-	const char * _in;
-public:
-	/// Constructor
-	/// @param in Name/Type of the violation
-	protocolViolation(const char * in);
-	/// Returns a pointer to a char buffer with some info about what the hell is going on
-	/// @return Error descritive text
-	virtual const char * what() const throw();
+	selectInterface();
+	/// Register a new descriptor
+	/// @param fdesc Descriptor to register
+	void register2(int fdesc);
+	/// Unregister a descriptor
+	/// @param fdesc Descriptor to unmonitor
+	void unregister(int fdesc);
+	/// Waits for new data in one of the registered descriptors
+	/// @returns A queue with descriptors with available data
+	std::queue<int> & wait();
 };
 
 #endif

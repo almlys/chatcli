@@ -48,50 +48,6 @@
 #define MAXDATASIZE 4096
 //End hate list
 
-selectInterface::selectInterface() {
-	FD_ZERO(&_readfs);
-	FD_ZERO(&_master);
-	_fdmax=0;
-}
-
-void selectInterface::register2(int fdesc) {
-	printf("registe: %i\n",fdesc);
-	FD_SET(fdesc,&_master);
-	_fdmax = fdesc>_fdmax ? fdesc : _fdmax;
-}
-
-void selectInterface::unregister(int fdesc) {
-	FD_CLR(fdesc,&_master);
-	if(_fdmax == fdesc) {
-		int i;
-		for(i=fdesc-1; i>3; i--) {
-			if(FD_ISSET(i,&_master)) {
-				_fdmax=i;
-				break;
-			}
-		}
-	}
-}
-
-std::queue<int> & selectInterface::wait() {
-	while(!_descs.empty()) _descs.pop();
-
-	_readfs = _master;
-	if(select(_fdmax+1,&_readfs,NULL,NULL,NULL) == -1) {
-		if(errno==EINTR) return _descs; //A signal was cauch
-		throw errorException("select");
-	}
-
-	int i;
-	for(i=0; i<=_fdmax; i++) {
-		if(FD_ISSET(i,&_readfs)) {
-			_descs.push(i);
-			//printf("%i", i);
-		}
-	}
-	return _descs;
-}
-
 
 clientSession::clientSession(int socket,U32 addr) {
 	_socket=socket;

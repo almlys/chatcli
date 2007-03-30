@@ -31,68 +31,58 @@
 * Pràctica I                                                                  *
 *                                                                             *
 ******************************************************************************/
-#ifndef PROTOCOL_H
-#define PROTOCOL_H
+#include <iostream>
+#include <queue>
 
-/*
- Defines all the pràctica I chat protocol v2.0
- Please see cprotocol.py as a reference for reading this file
-*/
+#include <errno.h>
+#include <sys/time.h>
+#include <sys/types.h>
+#include <unistd.h>
 
-//Some commonly used Data types
-typedef unsigned char Byte;
-typedef unsigned short int U16;
-typedef unsigned int U32;
+#include "protocol.h"
+#include "netcommon.h"
 
-/// Chat Protocol v2.0
-namespace protocol {
-	extern const char * sep;
-	extern const char * ok;
-	extern const char * error;
-	extern const char * helo;
-	extern const char * register2;
-	extern const char * query;
-	extern const char * answer;
-	extern const char * pm;
-	extern const char * bcast;
-	extern const char * exit;
-};
+selectInterface::selectInterface() {
+	FD_ZERO(&_readfs);
+	FD_ZERO(&_master);
+	_fdmax=0;
+}
 
-/** Define client states
-    Defines in wich states can be the client
-     new 0 -> New connection, not hallowed yet
-     ident 1 -> Client has been hallowed (HOLA recieved)
-     register 2 -> Client has been hallowed and registered (HOLA and REGISTER
-                   succesfully recieved and not duplicated)
-*/
-enum ClientStatus { kNew=0, kIdent=1, kRegister=2 };
+void selectInterface::register2(int fdesc) {
+	printf("registe: %i\n",fdesc);
+	FD_SET(fdesc,&_master);
+	_fdmax = fdesc>_fdmax ? fdesc : _fdmax;
+}
 
+void selectInterface::unregister(int fdesc) {
+	FD_CLR(fdesc,&_master);
+	if(_fdmax == fdesc) {
+		int i;
+		for(i=fdesc-1; i>3; i--) {
+			if(FD_ISSET(i,&_master)) {
+				_fdmax=i;
+				break;
+			}
+		}
+	}
+}
 
-/// Encapsulate errors into this exception
-class errorException: public std::exception {
-private:
-	int _errno;
-	const char * _in;
-public:
-	/// Constructor
-	/// @param in Some text (eg, function name)
-	errorException(const char * in);
-	/// Returns a pointer to a char buffer with some info about what the hell is going on
-	/// @return Error descritive text
-	virtual const char * what() const throw();
-};
+std::queue<int> & selectInterface::wait() {
+	while(!_descs.empty()) _descs.pop();
 
-/// Defines a protocol Violation
-class protocolViolation: public std::exception {
-private:
-	const char * _in;
-public:
-	/// Constructor
-	/// @param in Name/Type of the violation
-	protocolViolation(const char * in);
-	/// Returns a pointer to a char buffer with some info about what the hell is going on
-	/// @return Error descritive text
-	virtual const char * what() const throw();
-};
+	_readfs = _master;
+	if(select(_fdmax+1,&_readfs,NULL,NULL,NULL) == -1) {
+		if(errno==EINTR) return _descs; //A signal was cauch
+		throw errorException("select");
+	}
 
-#endif
+	int i;
+	for(i=0; i<=_fdmax; i++) {
+		if(FD_ISSET(i,&_readfs)) {
+			_descs.push(i);
+			//printf("%i", i);
+		}
+	}
+	return _descs;
+}
+

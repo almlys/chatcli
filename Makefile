@@ -29,7 +29,7 @@ CPP=g++
 CPPFLAGS=-Wall -g -O0
 
 BINS=server client
-COMMON_OBJ=protocol.o
+COMMON_OBJ=protocol.o netcommon.o
 SERVER_OBJ=server.o ${COMMON_OBJ}
 CLIENT_OBJ=client.o
 

@@ -35,6 +35,7 @@
 #define SERVER_H
 
 #include "protocol.h"
+#include "netcommon.h"
 
 class clientSession {
 private:
@@ -80,21 +81,6 @@ public:
 	const char * findAddress(const char * name);
 	std::map<U32,clientSession *> & getAllClients();
 };
-
-
-class selectInterface {
-private:
-	fd_set _master;
-	fd_set _readfs;
-	int _fdmax;
-	std::queue<int> _descs;
-public:
-	selectInterface();
-	void register2(int fdesc);
-	void unregister(int fdesc);
-	std::queue<int> & wait();
-};
-
 
 class server {
 private:
