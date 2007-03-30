@@ -1,0 +1,18 @@
+** Práctica 1 Chat Client/Server Python Version **
+==================================================
+
+* Requirements *
+================
+* Python 2.4 or higher
+* WxPython 2.6 or higher (2.6 recomended) for the client graphical interface
+
+* Running the server *
+======================
+
+To run the server just type: ./server.py
+
+* Running the client *
+======================
+
+To run the client just type: ./client.py
+
