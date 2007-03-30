@@ -38,6 +38,7 @@
 #include "netcommon.h"
 #include "sessionMGR.h"
 
+/// The server
 class server {
 private:
 	Byte _keep_running;
@@ -50,17 +51,40 @@ public:
 	//Porqueries de les que Odia en JMG ;)
 	selectInterface _select;
 public:
+	/// Constructor
+	/// @param lhost Bind host (NOT IMPLEMENTED) FIXME, it will just use 0, indiferently of its value
+	/// @param lport Bind port (default 8642)
+	/// @param backlog Backlog (default 10)
 	server(const std::string lhost="",const U16 lport=8642,const Byte backlog=10);
+	
+	/// Destructor
 	~server();
+
+	/// Sets the bind address
+	/// @param lhost Bind host
+	/// @param lport Bind port
 	void setBindAddress(const std::string lhost,const U16 lport);
+	
+	/// Netcore startup stuff
 	void startOp();
+
+	/// Netcore end sequence
 	void stopOp();
+	
+	/// Requeste loop stuff, Main aplication loop
 	void requestLoop();
+	
+	/// Runs the Main aplication run
 	void run();
-	int proccessRequest(clientSession *,char * buf);
-	/*int sendall(const int csock, const char * msg);
-	int sendok(const int csock, const char * msg);
-	int senderror(const int csock, const char * msg);*/
+
+	/// Process a single request
+	/// @param client Pointer to the associated client session
+	/// @param buf Buffer with data to process
+	int proccessRequest(clientSession * client,char * buf);
+
+	/// Sends a broadcast message
+	/// @param msg The message to send
+	/// @param client The source client
 	void broadcast(const char * msg,const clientSession * client=NULL);
 };
 
