@@ -25,6 +25,15 @@ using namespace std;
 
 #define AQ { printf("Estoy aquí: %s,%i,%s\n",__FILE__,__LINE__,__FUNCTION__); }
 
+/// Show client usage information
+void help(void) {
+        printf("USO DEL CLIENTE:\n\
+ usr: msg  -  Se manda el mensage 'msg' al usuairo 'usr'.\n\
+ all: msg  -  Se manda el mensage 'msg' a todos los usuarios conecados.\n\
+ ayuda  -  Muestra este menu.\n\
+ salir  -  Finalizamos la ejecucion del programa. \n\
+\n");
+}
 
 /// Send message with udp
 int sendudp(char * buf, string str) {
@@ -90,6 +99,34 @@ int sendudp(char * buf, string str) {
 	return 0;
 }
 
+/// Send a message to the server with tpc connection
+int sendmsg(int sock, char * buf){
+	int n, sn;
+	n=strlen(buf);
+	if((sn=send(sock,(const void *)buf,n,0))==-1) {
+		perror("send\n");
+		exit(-1);
+	} else if(sn!=n) {
+		fprintf(stderr,"Error, no se enviaron todos los datos?\n");
+		exit(-1);
+	}
+	return 0;
+}
+/// Process recived message
+char * processmsg(int sock, char * buf){
+	int sn;
+	memset(buf,0,sizeof(buf));
+	if ((sn=recv(sock, buf, MAXDATASIZE-1, 0)) == -1) {
+		perror("recv");
+		exit(-1);
+	}
+	if(sn==0) {
+		printf("El servidor cerró la conexión\n");
+	}
+	buf[sn] = '\0';
+	return buf;
+}
+
 /// Process recived data of the user
 int processdata(int sock, char * buf, int n) {
 	int len, sn;
@@ -112,43 +149,23 @@ int processdata(int sock, char * buf, int n) {
 	cout<<"Processing request, command: "<<str1<<",data: "<<str2<<endl;
 
 	if(str1=="ayuda") { //Identificacio
-		cout<<"MOSTREM L'AJUDA"<<endl;
+		help();
 	} else if(str1=="salir"){
-		cout<<"CRIDEM LA FUNCIO SORTIR"<<endl;
+		cout<<"Cerrando..."<<endl;
+		exit(0);
 	} else if(str1=="all"){
 		cout<<"Enviem a tothom..."<<endl;
 		sprintf(buf,"700 %s", str2.c_str());
-		if((sn=send(sock,(const void *)buf,n,0))==-1) {
-			perror("send\n");
-			exit(-1);
-		} else if(sn!=n) {
-			fprintf(stderr,"Error, no se enviaron todos los datos?\n");
-			exit(-1);
-		}
+		sendmsg(sock,buf);
 	} else {
 		cout<<"Enviem el privat..."<<endl;
 		cout<<"Primer solicitem ip desti..."<<endl;
 		sprintf(buf,"400 %s\0", str1.c_str());
-		n=strlen(buf);
-		if((sn=send(sock,(const void *)buf,n,0))==-1) {
-			perror("send\n");
-			exit(-1);
-		} else if(sn!=n) {
-			fprintf(stderr,"Error, no se enviaron todos los datos?\n");
-			exit(-1);
-		}
-		memset(buf,0,sizeof(buf));
-		if ((sn=recv(sock, buf, MAXDATASIZE-1, 0)) == -1) {
-			perror("recv");
-			exit(-1);
-		}
-		if(sn==0) {
-			printf("El servidor cerró la conexión\n");
-		}
+		sendmsg(sock, buf);
+		buf=processmsg(sock, buf);
 		cout<<buf<<endl;
 		sendudp(buf, str2);
 	}
-
 	return 0;
 }
 
@@ -177,6 +194,7 @@ int startupc(){
 	}
 	return sockudp;
 }
+
 
 int main(int argc, char *argv[]) {
 	int fdmax;
@@ -233,55 +251,20 @@ int main(int argc, char *argv[]) {
 	cout<<"Identifikem"<<endl;
 	memset(buf,0,sizeof(buf));
 	sprintf(buf,"HOLA");
-  n=strlen(buf);
-	if((sn=send(sockfd,(const void *)buf,n,0))==-1) {
-		perror("send\n");
-		exit(-1);
-	} else if(sn!=n) {
-		fprintf(stderr,"Error, no se enviaron todos los datos?\n");
-		exit(-1);
-	}
-	memset(buf,0,sizeof(buf));
-	if ((numbytes=recv(sockfd, buf, MAXDATASIZE-1, 0)) == -1) {
-		perror("recv");
-		exit(-1);
-	}
-	if(numbytes==0) {
-		printf("El servidor cerró la conexión\n");
-		keep_running=0;
-	}
-	buf[numbytes] = '\0';
+	sendmsg(sockfd, buf);
+	strcmp(buf,processmsg(sockfd,buf));
 	if(!strncmp(buf,"100",3)){
 		printf("Identificats correctament\n");
 	}
 
 	cout<<"Registrem"<<endl;
 	sprintf(buf,"300 %s\0", user.c_str());
-	n=strlen(buf);
-	if((sn=send(sockfd,(const void *)buf,n,0))==-1) {
-		perror("send\n");
-		exit(-1);
-	} else if(sn!=n) {
-		fprintf(stderr,"Error, no se enviaron todos los datos?\n");
-		exit(-1);
-	}
-	memset(buf,0,sizeof(buf));
-	if ((numbytes=recv(sockfd, buf, MAXDATASIZE-1, 0)) == -1) {
-		perror("recv");
-		exit(-1);
-	}
-	if(numbytes==0) {
-		printf("El servidor cerró la conexión\n");
-		keep_running=0;
-	}
+	sendmsg(sockfd, buf);
+	strcmp(buf,processmsg(sockfd,buf));
 	if(!strncmp(buf,"100",3)){
 		cout<<"Registrats correctament"<<endl;
 	}
 	
-//Objetivo:
-//	1- Utilizar el select para detectar cunado se han introducido datos por teclado
-//	2- Mostra los datos introducidos
-//	HECHO
 
 	FD_ZERO(&readfs); //Inicializar
 	FD_ZERO(&master);
