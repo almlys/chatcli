@@ -88,4 +88,11 @@ public:
 	void broadcast(const char * msg,const clientSession * client=NULL);
 };
 
+/// Configuration struct
+struct mconfig {
+	Byte daemon;
+	U32 backlog;
+	U16 port;
+};
+
 #endif

@@ -37,6 +37,7 @@
 #include <queue>
 #include <map>
 
+#include <unistd.h>
 #include <errno.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -227,8 +228,66 @@ void server::run() {
 	stopOp();
 }
 
+/// Show server usage information
+/// @param pgname Program name
+void usage(char * pgname) {
+	printf("Usage: %s [-p 8642] [-b 10] [-D]\n\
+ -p <port>: Select the listening port\n\
+ -b <backlog>: Set how many pending connections the queue will hold\n\
+ -D: Daemon mode\n\
+\n",pgname);
+}
+
+/// Parse command line args
+/// @param config Address of the destination Configuration struct
+/// @param argc Number of args
+/// @param argv Args vector
+/// @returns 0 if everything went well, non-zero on error
+char parse_argv(struct mconfig * config, int argc, char * argv[]) {
+	int i;
+	for (i=1; i<argc; i++) {
+		if(!strcmp(argv[i],"-h") || !strcmp(argv[i],"--help")) {
+			usage(argv[0]); return -1;
+		} else if(!strcmp(argv[i],"-p") && argc>i+1) {
+			i++;
+			config->port=(U16)atoi(argv[i]);
+		} else if(!strcmp(argv[i],"-b") && argc>i+1) {
+			i++;
+			config->backlog=(U32)atoi(argv[i]);
+		} else if(!strcmp(argv[i],"-D")) {
+			config->daemon=1;
+		} else {
+			//usage(argv[0]); return -1;
+			std::cerr<<"\033[1;31mWarning:\033[0m Ignoring unknown command line param "<<argv[i]<<std::endl;
+		}
+	}
+	return 0;
+}
+
+/// Set defaults configuration settings
+/// @param config Address of the Configuration struct
+void set_config_defaults(struct mconfig * config) {
+	memset(config,0,sizeof(struct mconfig));
+	config->backlog=10;
+	config->port=8642;
+}
+
 /// Main Program
 int main(int argc, char * argv[]) {
+	struct mconfig config;
+	set_config_defaults(&config);
+	if(parse_argv(&config,argc,argv)) { return -1; }
+
+	//Daemon mode?
+	if(config.daemon) {
+		daemon(1,0);
+	}
+
+	std::cout<<std::endl;
+	std::cout<<"\033[0;36m/***************************************************************\\"<<std::endl;
+	std::cout<<          "|                IgAlJo C++ MAD server starting...              |"<<std::endl;
+	std::cout<<         "\\***************************************************************/\033[0m"<<std::endl;
+	std::cout<<std::endl<<"Presh Ctrl+C to stop execution"<<std::endl;
 
 	try {
 		server * srv = new server();
