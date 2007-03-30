@@ -31,95 +31,56 @@
 * Pràctica I                                                                  *
 *                                                                             *
 ******************************************************************************/
-#ifndef SERVER_H
-#define SERVER_H
+
+//In order to understand this file you may need to read cprotocol.py and protocol.h
+// Have fun!!
+
+#include <iostream>
+#include <string>
+#include <exception>
+
+#include <errno.h>
 
 #include "protocol.h"
 
-class clientSession {
-private:
-	int _socket;
-	U32 _addr;
-	std::string _name;
-	ClientStatus _status;
-public:
-	clientSession(int socket,U32 addr);
-	int fileno() const;
-	void sendall(const char * msg);
-	void senderror(const char * msg);
-	void sendOk(const char * msg);
-	void sendanswer(const char * msg);
-	void senddif(const char * msg);
-	void rcvHello();
-	void rcvRegister();
-	void setName(const char * name);
-	const char * getName() const;
-	bool isHallowed() const;
-	bool isRegistered() const;
-	const char * getAddr() const;
-	U32 getIp() const;
-};
+//Protocol stuff
+const char * protocol::sep="\x0D\x0A";
+// "\n" *nix systems
+// "\r" Old Mac systems
+// "\r\n" Hasecorp Hasefroch systems
+// Justificació del nostre separador: El protocol HTTP, la propia aplicació de telnet, i altres emprent com a estandar l'enviament de \r\n com a separadors de comandes. Veure http://www.rfc-editor.org/EOLstory.txt, i
+// l'empanada mental al fitxer cprotocol.py
+const char * protocol::ok="100";
+const char * protocol::error="200";
+const char * protocol::helo="HOLA";
+const char * protocol::register2="300";
+const char * protocol::query="400";
+const char * protocol::answer="500";
+const char * protocol::pm="600";
+const char * protocol::bcast="700";
+const char * protocol::exit="800";
 
 
-class server;
+errorException::errorException(const char * in) {
+	_errno=errno;
+	_in=in;
+}
 
-class sessionMGR {
-private:
-	server * _parent;
-	std::map<U32,clientSession *> _clients;
-	std::map<std::string,clientSession *> _nicks;
-	std::map<int,clientSession *> _sockets;
-public:
-	sessionMGR(server * parent);
-	~sessionMGR();
-	clientSession * find(int sock);
-	void add(int sock,U32 addr);
-	void remove(int sock);
-	void remove(clientSession * client);
-	void register2(clientSession * client,const char * name);
-	const char * findAddress(const char * name);
-	std::map<U32,clientSession *> & getAllClients();
-};
+const char * errorException::what() const throw() {
+	std::string errortext;
+	char buf[100];
+	sprintf(buf,"%s: %i",_in,_errno);
+	errortext = buf;
+	errortext += " ";
+	errortext += strerror(_errno);
+	return errortext.c_str();
+}
 
+protocolViolation::protocolViolation(const char * in) {
+	_in=in;
+}
 
-class selectInterface {
-private:
-	fd_set _master;
-	fd_set _readfs;
-	int _fdmax;
-	std::queue<int> _descs;
-public:
-	selectInterface();
-	void register2(int fdesc);
-	void unregister(int fdesc);
-	std::queue<int> & wait();
-};
+const char *protocolViolation::what() const throw() {
+	return _in;
+}
 
-
-class server {
-private:
-	Byte _keep_running;
-	int _socket;
-	int _backlog;
-	std::string _bindAddr;
-	U16 _bindPort;
-	sessionMGR * _clients;
-public:
-	//Porqueries de les que Odia en JMG ;)
-	selectInterface _select;
-public:
-	server(const std::string lhost="",const U16 lport=8642,const Byte backlog=10);
-	~server();
-	void setBindAddress(const std::string lhost,const U16 lport);
-	void startOp();
-	void stopOp();
-	void requestLoop();
-	void run();
-	int proccessRequest(clientSession *,char * buf);
-	/*int sendall(const int csock, const char * msg);
-	int sendok(const int csock, const char * msg);
-	int senderror(const int csock, const char * msg);*/
-	void broadcast(const char * msg,const clientSession * client=NULL);
-};
-
-#endif

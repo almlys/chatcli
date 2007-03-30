@@ -29,8 +29,8 @@ CPP=g++
 CPPFLAGS=-Wall -g -O0
 
 BINS=server client
-COMMON_OBJ=common.o
-SERVER_OBJ=server.o
+COMMON_OBJ=protocol.o
+SERVER_OBJ=server.o ${COMMON_OBJ}
 CLIENT_OBJ=client.o
 
 BUILD=${CC} ${CCFLAGS}
