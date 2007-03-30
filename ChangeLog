@@ -1,3 +1,21 @@
+2007-03-30 13:00  alberto
+
+	* Makefile, client-incompleto.c, client-old.c, client.c,
+	  client.cpp, cserver.cpp, server-incompleto.c, server.c,
+	  server.cpp, server.h, xserver.cpp, xserver.h: reorghannizahation
+
+2007-03-30 10:34  josep
+
+	* client.cpp:
+
+2007-03-30 02:05  alberto
+
+	* Doxyfile: added doxyfile
+
+2007-03-30 01:56  alberto
+
+	* AUTHORS, COPYING, ChangeLog, README: crash
+
 2007-03-30 01:53  alberto
 
 	* python/AUTHORS, python/COPYING: copying and authors
