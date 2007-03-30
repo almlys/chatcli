@@ -38,6 +38,7 @@
 #include <map>
 
 #include <unistd.h>
+#include <signal.h>
 #include <errno.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -68,7 +69,7 @@ void server::setBindAddress(const std::string lhost,const U16 lport) {
 }
 
 void server::startOp() {
-	//installSignalHandlers(); TODO
+	installSignalHandlers();
 	//Startup
 	//Create the socket (TCP)
 	if((_socket=socket(PF_INET,SOCK_STREAM,0)) == -1) {
@@ -226,6 +227,28 @@ void server::run() {
 		requestLoop();
 	}
 	stopOp();
+}
+
+void server::signalHandler(int s) {
+	switch(s) {
+		case SIGTERM:
+		case SIGINT:
+			if(_keep_running==0) {
+				std::cout<<"Server killed!"<<std::endl;
+				exit(-1);
+			}
+			std::cout<<"Shutting down server..."<<std::endl;
+			_keep_running=0;
+			//signal(s,(void *)&signalHandler);
+			break;
+		default:
+			std::cout<<"Error: Unexpected signal recieved!"<<std::endl;
+	}
+}
+
+void server::installSignalHandlers() {
+	//signal(SIGTERM, (void *)signalHandler);
+	//signal(SIGINT, (void *)signalHandler);
 }
 
 /// Show server usage information

@@ -86,6 +86,14 @@ public:
 	/// @param msg The message to send
 	/// @param client The source client
 	void broadcast(const char * msg,const clientSession * client=NULL);
+
+	/// Handles some signals
+	/// @param s Signal number
+	void signalHandler(int s);
+
+	/// Installs all those nice shiny signal handlers
+	void installSignalHandlers();
+
 };
 
 /// Configuration struct
