@@ -42,6 +42,7 @@ Execució:
 import socket
 from netcommon import selectInterface
 from cprotocol import *
+from partialDataReader import PartialDataReader
 
 class client(object):
     """
@@ -66,6 +67,7 @@ class client(object):
         self.serveraddr=server
         self.bufferSize = buf
         self.nick = login
+        self.serverReader = PartialDataReader()
 
     def setBindAddress(self,lhost,lport):
         """
@@ -158,7 +160,8 @@ class client(object):
                     print "Connection closed by server"
                     desc.close()
                     self.keep_running=False
-                self.proccessServerResponse(data.strip())
+                for req in self.serverReader.feed(data):
+                    self.proccessServerResponse(req)
             else:
                 # Data was recieved from a client
                 data,addr = desc.recvfrom(self.bufferSize)
@@ -178,6 +181,8 @@ class client(object):
         """
         User shutdown
         """
+        print ""
+        print "Shutting down"
         self.sendCmd(protocol.exit)
         self.keep_running=False
 
@@ -230,7 +235,7 @@ class client(object):
         Process the response recieved by the server
         """
         try:
-            cmd, data = msg.split(':',1)
+            cmd, data = msg.split(' ',1)
         except ValueError:
             cmd = msg
             data = ""
@@ -254,6 +259,10 @@ class client(object):
                     self.setNick(self.nick)
                 elif self.state==ClientStatus.ident:
                     self.state=ClientStatus.register
+            elif cmd==protocol.bcast:
+                print ""
+                print data
+                self.writePrompt()
                     
         except ProtocolViolation,e:
             print e

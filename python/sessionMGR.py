@@ -34,6 +34,7 @@ An related client session objects
 __all__ = ["clientSession","sessionMGR",]
 
 from cprotocol import *
+from partialDataReader import PartialDataReader
 
 class clientSession(object):
     """
@@ -41,7 +42,7 @@ class clientSession(object):
     Holds client related data to its session
     """
 
-    partialData = ""
+    partialData = None
 
     def __init__(self,conn,addr):
         """
@@ -176,6 +177,8 @@ class sessionMGR(object):
         @param addr Ip/port tuple of the source client
         """
         cli = clientSession(conn,addr)
+        cli.partialData = PartialDataReader(self.parent.trash_telnet_garbage,
+                                            self.parent.allow_empty_cmds)
         if self.clients.has_key(addr):
             self.parent.select.unregister(self.clients[addr])
             name=self.clients[addr].getName()

@@ -59,7 +59,6 @@ class server(object):
 
     keep_running = True
     shutting_down = False
-    sep_state = None
 
     def __init__(self,lhost="",lport=8642,backlog=10,bufsize=4096,nw=True,emptycmds=False,trash=False,egg=0xf):
         """
@@ -156,40 +155,11 @@ class server(object):
             else:
                 # Data was recieved from a client
                 data = client.conn.recv(self.bufferSize)
-                print "Partial data ->%s<-" %(data,)
+                #print "Partial data ->%s<-" %(data,)
                 if len(data)==0:
                     self.clients.remove(client)
                     continue
-                # Las famosas lecturas parciales que dan tantos quebraderos de cabeza
-                # Concatenate a previus incompleted message, with the following data
-                data = client.partialData + data
-                client.partialData = ""
-                for req in data.splitlines(True):
-                    ok_sep=False
-                    sep_state = None
-                    for k in protocol.sep:
-                        if req.endswith(k):
-                            ok_sep=True
-                            sep_state = k
-                    if not ok_sep:
-                        # No se han recibido todos los datos!!!
-                        client.partialData = req
-                        print "Notice: Not all data was recieved, waiting for protocol separator"
-                        break
-                    # Limpiar la basura que envia Telnet?
-                    if self.trash_telnet_garbage:
-                        telnet_garbage="\xFF\xFD\x01\x02\x03"
-                    else:
-                        telnet_garbage=""
-                    req = req.strip("\x00 \t" + protocol.sep + telnet_garbage)
-                    #Esto se carga el \n y el \r
-                    # El 0x00, es para que nuestro server funcione con algunas implementaciones
-                    # mal hechas, que envian ristras de zeros despues del mensaje
-                    # Si activamos esto, el servidor no considerada los comandos vacios como errores
-                    if len(req)==0 and sep_state!=self.sep_state and self.sep_state!=None: continue
-                    print repr(sep_state),repr(self.sep_state)
-                    self.sep_state = sep_state
-                    if self.allow_empty_cmds and len(req)==0: continue
+                for req in client.partialData.feed(data):
                     self.processRequest(client,req)
 
     def processRequest(self,client,msg):
