@@ -93,12 +93,6 @@ int sendudp(char * buf, char * msg,int sockfdudp) {
 				exit(1);
 			}
 		
-			/* Creamos el socket */
-		/*	if ((sockfdudp = socket(AF_INET, SOCK_DGRAM, 0)) == -1) {
-				perror("socket");
-				exit(1);
-			}*/
-		
 			/* a donde mandar */
 			their_addr_udp.sin_family = AF_INET; /* usa host byte order */
 			their_addr_udp.sin_port = htons(UDP_PORT); /* usa network byte order */
@@ -133,7 +127,7 @@ int sendmsg(int sock, const char * buf){
 	return 0;
 }
 /// Process recived message
-char * processmsg(int sock, char * buf){
+int processmsg(int sock, char * buf){
 	int sn;
 	memset(buf,0,sizeof(buf));
 	if ((sn=recv(sock, buf, MAXDATASIZE-1, 0)) == -1) {
@@ -144,7 +138,7 @@ char * processmsg(int sock, char * buf){
 		printf("El servidor cerró la conexión\n");
 	}
 	buf[sn] = '\0';
-	return buf;
+	return 0;
 }
 
 /// Process recived data of the user
@@ -168,24 +162,32 @@ unsigned char processdata(int sock, char * buf,int sockudp) {
 	}
 	cout<<"Processing request, command: "<<str1<<",data: "<<str2<<endl;
 
-	if(str1=="ayuda") { //Identificacio
-		help();
-	} else if(str1=="salir"){
-		cout<<"Cerrando..."<<endl;
-		return 0;
+	if(str2==""){
+		if(str1=="ayuda") { //Identificacio
+			help();
+		} else if(str1=="salir"){
+			cout<<"Cerrando..."<<endl;
+			return 0;
+		} else {
+			cout<<"Comando desconocido"<<endl;
+			help();
+		}
 	} else if(str1=="todos"){
 		cout<<"Enviamos a todos..."<<endl;
-		sprintf(buf,"700 %s", str2.c_str());
-		sendmsg(sock,buf);
-	} else { //DUBTE
+			sprintf(buf,"700 %s", str2.c_str());
+			sendmsg(sock,buf);
+	} else {
 		cout<<"Enviamos el privado..."<<endl;
-		memset(buf,0,sizeof(buf));
-		sprintf(buf,"400 %s", str1.c_str());
-		sendmsg(sock, buf);
-		buf=processmsg(sock, buf);
+		string out=protocol::query;
+		out+=" ";
+		out+=str1;
+		out+=protocol::sep;
+		sendmsg(sock, out.c_str());
+		processmsg(sock, buf);
 		cout<<buf<<endl;
 		sendudp(buf, (char *) str2.c_str(),sockudp);
 	}
+
 	return 1;
 }
 
@@ -258,21 +260,22 @@ int main(int argc, char *argv[]) {
 	}
 
 	cout<<"Identifikem"<<endl;
-	string out = protocol::helo;
+	string out=protocol::helo;
 	out+=protocol::sep;
-/*	memset(buf,0,sizeof(buf));
-	sprintf(buf,"HOLA");*/
 	sendmsg(sockfd, out.c_str());
-	strcpy(buf,processmsg(sockfd,buf));
+	processmsg(sockfd,buf);
 	if(!strncmp(buf,"100",3)){
 		printf("Identificats correctament\n");
 	}
 
 	cout<<"Registrem"<<endl;
-	memset(buf,0,sizeof(buf));
-	sprintf(buf,"300 %s", user.c_str());
-	sendmsg(sockfd, buf);
-	strcpy(buf,processmsg(sockfd,buf));
+	out=protocol::register2;
+	out+=" ";
+	out+=user.c_str();
+	//out+=" 7766";
+	out+=protocol::sep;
+	sendmsg(sockfd, out.c_str());
+	processmsg(sockfd,buf);
 	if(!strncmp(buf,"100",3)){
 		cout<<"Registrats correctament"<<endl;
 	}
