@@ -54,6 +54,7 @@ class clientSession(object):
         self.conn = conn
         self.status = ClientStatus.new
         self.name = None
+        self.port = None
 
     def fileno(self):
         """
@@ -109,6 +110,9 @@ class clientSession(object):
         """
         self.name = name
         self.status=ClientStatus.register
+
+    def setPort(self,port):
+        self.port = port
 
     def getName(self):
         """
@@ -195,7 +199,7 @@ class sessionMGR(object):
             del self.nicks[client.getName()]
         del self.clients[client.addr]
 
-    def register(self,client,name):
+    def register(self,client,name,port):
         """
         Registers a nick to our YellowPages database
         @param client The client object
@@ -212,6 +216,7 @@ class sessionMGR(object):
             self.parent.broadcast("%s has joined the chat" %(name,),client)
         self.nicks[name] = client
         client.setName(name)
+        client.setPort(port)
 
     def findAddress(self,name):
         """
@@ -221,7 +226,7 @@ class sessionMGR(object):
         @return IP address of the client
         """
         if self.nicks.has_key(name):
-            return self.nicks[name].addr[0]
+            return self.nicks[name].addr[0] + " " + str(self.nicks[name].port)
         else:
             #raise NickNotFound
             return "null"

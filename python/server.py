@@ -33,13 +33,15 @@ Xarxes II
 Implementació d'un petit servidor de chat
 
 Execució:
-./server.py [-p 8642] [-b 10] [-D] [-buf 4096] [-nw]
+./server.py [-p 8642] [-b 10] [-D] [-buf 4096] [-nw] [-bind 0] [-ctt] [-e]
 -p <port>: Select a diferent listenning tcp port (default 8642)
--b <backlog: Set how many pending connections the queue will hold (default 10)
+-b <backlog>: Set how many pending connections the queue will hold (default 10)
 -D Daemon mode
 -buf <size>: Sets the incomming buffer size (default 4096)
 -nw: Forbides spaces in the nicknames (default are enabled)
 -bind <address>: Sets the address to bind (default 0 = all available addresses on all interfaces)
+-ctt: Cleans telnet protocol characters <IAC>,<TOF>,<OPT> (default dissabled)
+-e: Allow empty cmds from client (default dissabled)
 """
 
 # TODO: Will be nice to Allow to bind to an specific interface, for those machines with multiple interfaces.
@@ -57,8 +59,9 @@ class server(object):
 
     keep_running = True
     shutting_down = False
+    sep_state = None
 
-    def __init__(self,lhost="",lport=8642,backlog=10,bufsize=4096,nw=True,easter_egg=0xf):
+    def __init__(self,lhost="",lport=8642,backlog=10,bufsize=4096,nw=True,emptycmds=False,trash=False,egg=0xf):
         """
         Constructor
         @param lhost Bind address (default all)
@@ -66,7 +69,8 @@ class server(object):
         @param backlog Set how many pending connections the queue will hold (default 10)
         @param bufsize Sets the incomming buffer size (default 4096)
         @param nw Allow whitespaces in the nicknames (default True)
-        @param easter_egg I cannot say what this does, it's an easter egg, so play with it :)
+        @param emptycmds Allow empty commands
+        @param trash Trash telnet protocol chars
         """
         self.socket=None
         self.initialized=False
@@ -74,7 +78,9 @@ class server(object):
         self.backlog=backlog
         self.bufferSize = bufsize
         self.allowwhitespaces = nw
-        self.shutdowncount = easter_egg
+        self.shutdowncount = egg
+        self.trash_telnet_garbage = trash
+        self.allow_empty_cmds = emptycmds
         self.clients = sessionMGR(self)
 
     def setBindAddress(self,lhost,lport):
@@ -150,6 +156,7 @@ class server(object):
             else:
                 # Data was recieved from a client
                 data = client.conn.recv(self.bufferSize)
+                print "Partial data ->%s<-" %(data,)
                 if len(data)==0:
                     self.clients.remove(client)
                     continue
@@ -159,26 +166,30 @@ class server(object):
                 client.partialData = ""
                 for req in data.splitlines(True):
                     ok_sep=False
+                    sep_state = None
                     for k in protocol.sep:
                         if req.endswith(k):
                             ok_sep=True
+                            sep_state = k
                     if not ok_sep:
                         # No se han recibido todos los datos!!!
                         client.partialData = req
+                        print "Notice: Not all data was recieved, waiting for protocol separator"
                         break
-                    if 1:
+                    # Limpiar la basura que envia Telnet?
+                    if self.trash_telnet_garbage:
                         telnet_garbage="\xFF\xFD\x01\x02\x03"
                     else:
                         telnet_garbage=""
                     req = req.strip("\x00 \t" + protocol.sep + telnet_garbage)
-                    #Esto se carga el \n y el famoso \r que tanto le preocupa al profe
+                    #Esto se carga el \n y el \r
                     # El 0x00, es para que nuestro server funcione con algunas implementaciones
                     # mal hechas, que envian ristras de zeros despues del mensaje
-                    #if len(req)==0: continue
-                    #Ingnorar el protocolo telnet
-                    ##if req.startswith("\xFF\xFD"):
-                    ##    print req
-                    ##    continue
+                    # Si activamos esto, el servidor no considerada los comandos vacios como errores
+                    if len(req)==0 and sep_state!=self.sep_state and self.sep_state!=None: continue
+                    print repr(sep_state),repr(self.sep_state)
+                    self.sep_state = sep_state
+                    if self.allow_empty_cmds and len(req)==0: continue
                     self.processRequest(client,req)
 
     def processRequest(self,client,msg):
@@ -188,34 +199,61 @@ class server(object):
         @param data Raw data recieved from the client
         """
         print "From %s:%s" %(client.addr)
-        print "->%s<-" %(msg,)
+        #print "->%s<-" %(msg,)
 
         try:
             cmd, data = msg.split(' ',1)
         except ValueError:
             cmd = msg
             data = ""
+
+        port = 0
         try:
             print "processing cmd: %s, data: %s" %(cmd,data)
 
-            if len(data)!=0:
-                if self.allowwhitespaces:
-                    nick = data
-                else:
-                    nick = data.split()
-                    nick = nick[0]
-            else:
+            def getNickAndPort(self,data,portc=True):
+                port=0
                 nick=""
+                if len(data)!=0:
+                    if self.allowwhitespaces:
+                        if portc:
+                            t = data.rsplit(' ',1)
+                            nick = t[0]
+                            if len(t)>1:
+                                try:
+                                    port = int(t[1])
+                                except ValueError: pass
+                        else:
+                            nick = data
+                    else:
+                        t = data.split()
+                        nick = t[0]
+                        print len(t),port
+                        if len(t)>1:
+                            try:
+                                port = int(t[1])
+                            except ValueError: pass
+                return (nick,port)
+
+            #print "nick: %s, port: %i" %(nick,port)
 
             if cmd==protocol.helo and not client.isHallowed():
                 client.rcvHello()
                 client.sendOk("OK %s:%s" % (client.addr))
             elif (client.isHallowed() or client.isRegistered()) \
-                 and len(nick)!=0 and cmd==protocol.register:
-                self.clients.register(client,nick)
-                client.sendOk()
-            elif client.isRegistered() and len(nick)!=0 and cmd==protocol.query:
-                client.sendanswer("%s" %(self.clients.findAddress(nick)))
+                 and cmd==protocol.register:
+                nick, port = getNickAndPort(self,data,True)
+                if port!=0 and len(nick)!=0:
+                    self.clients.register(client,nick,port)
+                    client.sendOk()
+                else:
+                    raise ProtocolViolation,"Syntax error"
+            elif client.isRegistered() and cmd==protocol.query:
+                nick, port = getNickAndPort(self,data,False)
+                if len(nick)!=0:
+                    client.sendanswer("%s" %(self.clients.findAddress(nick)))
+                else:
+                    raise ProtocolViolation,"Syntax error"
             elif client.isRegistered() and cmd==protocol.bcast:
                 author=client.name
                 self.broadcast(author + " says: " + data,client)
@@ -240,11 +278,13 @@ class server(object):
             print e
             client.senderror()
             self.clients.remove(client)
-        except socket.error:
+        except (socket.error, ValueError):
             #Ignorar exceptiones producidas al procesar una petición
             print "Excepcion procesando petición..."
             import traceback,sys
-            traceback.print_exc(file=sys.stderr)            
+            traceback.print_exc(file=sys.stderr)
+            client.senderror()
+            self.clients.remove(client)
 
     def run(self):
         """
@@ -317,19 +357,25 @@ def usage():
     Prints some usage useful, nice help
     """
     import sys
-    print """%s [-p 8642] [-b 10] [-D] [-buf 4096] [-nw]
+    print """%s [-p 8642] [-b 10] [-D] [-buf 4096] [-nw] [-bind 0] [-ctt] [-e]
 -p <port>: Select a diferent listenning tcp port (default 8642)
--b <backlog: Set how many pending connections the queue will hold (default 10)
+-b <backlog>: Set how many pending connections the queue will hold (default 10)
 -D Daemon mode
 -buf <size>: Sets the incomming buffer size (default 4096)
 -nw: Forbides spaces in the nicknames (default are enabled)
--bind <address>: Sets the address to bind (default 0 = all available addresses on all interfaces)""" %(sys.argv[0])
+-bind <address>: Sets the address to bind (default 0 = all available addresses on all interfaces)
+-ctt: Cleans telnet protocol characters <IAC>,<TOF>,<OPT> (default dissabled)
+-e: Allow empty cmds from client (default dissabled)
+""" %(sys.argv[0])
+
 
 def parse_args():
     """
     Parses some command line arguments
     """
-    config={"daemon" : False, "port" : 8642, "backlog" : 10, "buf" : 4096, "nw" : True, "bind" : "", "egg" : 0xf}
+    config={"daemon" : False, "port" : 8642, "backlog" : 10, "buf" : 4096,
+            "nw" : True, "bind" : "", "egg" : 0xf, "trash_telnet_garbage" : False,
+            "allow_empty_cmds" : False}
     import sys
     n=len(sys.argv)
     i=1
@@ -357,8 +403,12 @@ def parse_args():
         elif arg=="+egg" and i+1<n:
             i+=1
             config["egg"]=sys.argv[i]
+        elif arg=="-ctt":
+            config["trash_telnet_garbage"]=not config["trash_telnet_garbage"]
+        elif arg=="-e":
+            config["allow_empty_cmds"]=not config["allow_empty_cmds"]
         else:
-            print "Warning: Ignoring unkown command line param %s" % (arg,)
+            print "\033[1;31mWarning:\033[0m Ignoring unkown command line param %s" % (arg,)
             #usage()
             #sys.exit(0)
         i+=1
@@ -370,11 +420,17 @@ def main():
     Main entry point
     """
     try:
-        config=parse_args()
+        try:
+            config=parse_args()
+        except ValueError:
+            usage()
+            import sys
+            sys.exit(0)
         if config["daemon"]:
             from daemon import daemon
             daemon()
-        srv=server(config["bind"],config["port"],config["backlog"],config["buf"],config["nw"],config["egg"])
+        srv=server(config["bind"],config["port"],config["backlog"],config["buf"],config["nw"],
+                   config["trash_telnet_garbage"],config["allow_empty_cmds"],config["egg"])
         print """
 \033[0;36m/***************************************************************\\
 |                IgAlJo python server starting...               |

@@ -31,7 +31,7 @@ CPPFLAGS=-Wall -g -O0
 BINS=server client
 COMMON_OBJ=protocol.o netcommon.o sessionMGR.o
 SERVER_OBJ=server.o ${COMMON_OBJ}
-CLIENT_OBJ=client.o
+CLIENT_OBJ=client.o protocol.o
 
 BUILD=${CC} ${CCFLAGS}
 BUILDCPP=${CPP} ${CPPFLAGS}

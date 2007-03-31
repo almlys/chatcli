@@ -40,6 +40,8 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 
+#include "protocol.h"
+
 using namespace std;
 
 #define PORT 8642 // the port client will be connecting to 
@@ -118,7 +120,7 @@ int sendudp(char * buf, char * msg,int sockfdudp) {
 }
 
 /// Send a message to the server with tpc connection
-int sendmsg(int sock, char * buf){
+int sendmsg(int sock, const char * buf){
 	int n, sn;
 	n=strlen(buf);
 	if((sn=send(sock,(const void *)buf,n,0))==-1) {
@@ -256,9 +258,11 @@ int main(int argc, char *argv[]) {
 	}
 
 	cout<<"Identifikem"<<endl;
-	memset(buf,0,sizeof(buf));
-	sprintf(buf,"HOLA");
-	sendmsg(sockfd, buf);
+	string out = protocol::helo;
+	out+=protocol::sep;
+/*	memset(buf,0,sizeof(buf));
+	sprintf(buf,"HOLA");*/
+	sendmsg(sockfd, out.c_str());
 	strcpy(buf,processmsg(sockfd,buf));
 	if(!strncmp(buf,"100",3)){
 		printf("Identificats correctament\n");
