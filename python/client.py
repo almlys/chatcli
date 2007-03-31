@@ -50,6 +50,7 @@ class client(object):
 
     keep_running = True
     state = ClientStatus.new
+    command_stack = []
 
     def __init__(self,login="anonymous",server=("localhost",8642),lhost="",lport=7766,buf=4096):
         """
@@ -176,12 +177,10 @@ class client(object):
         except ValueError:
             cmd = msg
             data = ""
-        if cmd=="exit":
-            self.usershutdown()
-        elif cmd=="todos" and len(data)!=0:
-            self.tcpsocket.sendall("700 " + data + "\n")
         if len(data)==0:
-            if cmd=="help":
+            if cmd=="salir":
+                self.usershutdown()
+            if cmd=="ayuda":
                 print """
 **** Client Help system ****
 ===============================================================================
@@ -190,6 +189,7 @@ class client(object):
  todos: msg      Sends a message to everybody connected in the network
  <nick>: msg     Sends a private message to nick
  salir           Terminates the program
+                       This client has Super Cow Powers.
 """
             elif cmd=="moo":
                 print """
@@ -203,10 +203,31 @@ class client(object):
 """
             else:
                 print "Unknown command %s" %(cmd,)
+
+        elif self.state == ClientStatus.register:
+            if cmd=="todos":
+                self.sendBcastMsg(data)
+            else:
+                print data
         else:
-            print data
+            print "Error, Cannot send a message, because the client is still not connected"
+        print "cliente > ",
+        import sys
+        sys.stdout.flush()
+
+    def sendBcastMsg(self,msg):
+        """
+        Send a broadcast message
+        """
+        self.command_stack.append(protocol.bcast)
+        self.sendCmd(protocol.bcast + " " + data)
     
     def signalHandler(self,num,frame):
+        """
+        A signal handler
+        @param num Signal number
+        @param frame Current stack frame
+        """
         import signal
         if self.keep_running:
             self.keep_running=False
@@ -217,6 +238,9 @@ class client(object):
             sys.exit()
 
     def installSignalHandlers(self):
+        """
+        Installs some signal handlers
+        """
         import signal
         signal.signal(signal.SIGTERM, self.signalHandler)
         signal.signal(signal.SIGINT, self.signalHandler)
@@ -301,6 +325,9 @@ def main():
             sys.exit(0)            
         cli=client(config["login"],(config["server_addr"],config["server_port"]),
                    config["bind"],config["port"],config["buf"])
+        print "cliente > ",
+        import sys
+        sys.stdout.flush()
         cli.run()
     except SystemExit:
         pass
