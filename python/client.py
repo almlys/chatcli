@@ -166,7 +166,10 @@ class client(object):
             else:
                 # Data was recieved from a client
                 data,addr = desc.recvfrom(self.bufferSize)
-                print addr,data
+                if data.startswith(protocol.pm + " "):
+                    print ""
+                    print "From %s:%i: %s" %(addr[0],addr[1],data[3:].strip(" \t" + protocol.sep))
+                    self.writePrompt()
 
     def run(self):
         """
@@ -245,14 +248,17 @@ class client(object):
                 if self.state==ClientStatus.ident:
                     print "Error, nick already in use, please use a different one!"
                 else:
+                    print ""
                     print "Error from server cmd:%s, data:%s" %(cmd,data)
                 raise ProtocolViolation,"Server said error"
             elif cmd==protocol.ok:
                 if len(self.command_stack)==0:
+                    print ""
                     print "Got ok, when it was not expected!"
                     raise ProtocolViolation,"Ok not expected"
                 op=self.command_stack.pop()
                 if op!=protocol.ok:
+                    print ""
                     print "Expected response was %s, but got %s" %(op,protocol.ok)
                     raise ProtocolViolation,"Unexpected response from server"
                 if self.state==ClientStatus.new:
@@ -262,12 +268,19 @@ class client(object):
                     self.state=ClientStatus.register
             elif cmd==protocol.answer:
                 if len(self.pm_stack)==0:
+                    print ""
                     print "Got answer, when it was not expected!"
                     raise ProtocolViolation,"Answer not exepected"
                 op=self.command_stack.pop()
                 if op!=protocol.answer:
+                    print ""
                     print "Expected response was %s, but got %s" %(op,protocol.ok)
                     raise ProtocolViolation,"Unexpected response from server"
+                if data=="null":
+                    print ""
+                    print "Nick not found"
+                    self.writePrompt()
+                    return
                 try:
                     ip, port = data.split(' ')
                     self.sendp2pMsg2peer((ip,int(port)),self.pm_stack.pop())
@@ -279,8 +292,13 @@ class client(object):
                 self.writePrompt()
                     
         except ProtocolViolation,e:
+            print ""
             print e
             self.usershutdown()
+        except socket.error,e:
+            print ""
+            print "Error sending a message: %s" %(e)
+            self.writePrompt()
 
 
     def sendBcastMsg(self,msg):
@@ -304,7 +322,18 @@ class client(object):
         @param addr Address
         @param msg Message to send
         """
-        self.udpsocket.sendto(msg,0,addr)
+        # Encara, que personalment penso que no cal fer aixó en udp
+        #sent=0
+        #n=len(msg)
+        #while(sent<n):
+        #    sent+==self.udpsocket.sendto(msg[sent:],0,addr)
+        # En udp no hi ha ni lecturas ni escrituras parciales, porque no es orientado a conexion
+        # simplemente tenemos un datagrama que puede o no llegar.
+        msg=protocol.pm + " " + self.nick + " says: " + msg + protocol.sep
+        n=self.udpsocket.sendto(msg,0,addr)
+        if(n!=len(msg)):
+           raise ProtocolViolation,"Unexpected error sending p21 data, sent: %i bytes, of %i" %(n,len(msg))
+        
 
     def signalHandler(self,num,frame):
         """
