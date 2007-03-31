@@ -90,6 +90,7 @@ class client(object):
         self.select = selectInterface()
         import sys
         self.select.register(sys.stdin)
+        self.writePrompt()
         self.select.register(self.udpsocket)
 
     def connect(self,address=("localhost",8642)):
@@ -178,9 +179,11 @@ class client(object):
             cmd = msg
             data = ""
         if len(data)==0:
-            if cmd=="salir":
+            if len(cmd)==0:
+                pass
+            elif cmd=="salir":
                 self.usershutdown()
-            if cmd=="ayuda":
+            elif cmd=="ayuda":
                 print """
 **** Client Help system ****
 ===============================================================================
@@ -208,12 +211,10 @@ class client(object):
             if cmd=="todos":
                 self.sendBcastMsg(data)
             else:
-                print data
+                print "data: ",data
         else:
             print "Error, Cannot send a message, because the client is still not connected"
-        print "cliente > ",
-        import sys
-        sys.stdout.flush()
+        self.writePrompt()
 
     def sendBcastMsg(self,msg):
         """
@@ -244,6 +245,14 @@ class client(object):
         import signal
         signal.signal(signal.SIGTERM, self.signalHandler)
         signal.signal(signal.SIGINT, self.signalHandler)
+
+    def writePrompt(self):
+        """
+        Prints the Prompt
+        """
+        import sys
+        sys.stdout.write("cliente > ")
+        sys.stdout.flush()
 
 def usage():
     """
@@ -325,9 +334,6 @@ def main():
             sys.exit(0)            
         cli=client(config["login"],(config["server_addr"],config["server_port"]),
                    config["bind"],config["port"],config["buf"])
-        print "cliente > ",
-        import sys
-        sys.stdout.flush()
         cli.run()
     except SystemExit:
         pass

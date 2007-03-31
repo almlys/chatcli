@@ -292,7 +292,12 @@ class server(object):
         """
         self.startOp()
         while(self.keep_running):
-            self.requestLoop()
+            try:
+                self.requestLoop()
+            except socket.error:
+                print "Excepcion in request loop..."
+                import traceback,sys
+                traceback.print_exc(file=sys.stderr)
         self.stopOp()
 
     def signalHandler(self,num,frame):
