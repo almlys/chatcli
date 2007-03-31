@@ -179,9 +179,7 @@ unsigned char processdata(int sock, char * buf,int sockudp) {
 	} else {
 		cout<<"Enviamos el privado..."<<endl;
 		string out=protocol::query;
-		out+=" ";
-		out+=str1;
-		out+=protocol::sep;
+		out+=" "+str1+protocol::sep;
 		sendmsg(sock, out.c_str());
 		processmsg(sock, buf);
 		cout<<buf<<endl;
@@ -270,10 +268,8 @@ int main(int argc, char *argv[]) {
 
 	cout<<"Registrem"<<endl;
 	out=protocol::register2;
-	out+=" ";
-	out+=user.c_str();
-	//out+=" 7766";
-	out+=protocol::sep;
+	out+=" "+user+protocol::sep;
+	//out+=" "+user+port+protocol::sep;
 	sendmsg(sockfd, out.c_str());
 	processmsg(sockfd,buf);
 	if(!strncmp(buf,"100",3)){
