@@ -101,7 +101,7 @@ class client(object):
         self.tcpsocket=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.tcpsocket.connect(address)
         self.select.register(self.tcpsocket)
-        self.sendCmd(protocol.helo)
+        self.sendHello()
 
     def sendCmd(self,cmd):
         """
@@ -109,12 +109,20 @@ class client(object):
         """
         self.tcpsocket.sendall(cmd + protocol.sep)
 
+    def sendHello(self):
+        """
+        Sends the hello request to the server
+        """
+        self.command_stack.append(protocol.ok)
+        self.sendCmd(protocol.helo)
+
     def setNick(self,nick):
         """
         Sets the nick
         @param nick Username to send to the server
         """
-        self.sendCmd(protocol.register + " " + nick + " " + self.udpsocket.getsockname()[1])
+        self.command_stack.append(protocol.ok)
+        self.sendCmd(protocol.register + " " + nick + " " + str(self.udpsocket.getsockname()[1]))
         
     def stopOp(self):
         """
@@ -150,7 +158,7 @@ class client(object):
                     print "Connection closed by server"
                     desc.close()
                     self.keep_running=False
-                print data
+                self.proccessServerResponse(data.strip())
             else:
                 # Data was recieved from a client
                 data,addr = desc.recvfrom(self.bufferSize)
@@ -171,6 +179,7 @@ class client(object):
         User shutdown
         """
         self.sendCmd(protocol.exit)
+        self.keep_running=False
 
     def processUserInput(self,msg):
         try:
@@ -213,15 +222,50 @@ class client(object):
             else:
                 print "data: ",data
         else:
-            print "Error, Cannot send a message, because the client is still not connected"
+            print "Error, Cannot send a message, because the client is still not registered"
         self.writePrompt()
+
+    def proccessServerResponse(self,msg):
+        """
+        Process the response recieved by the server
+        """
+        try:
+            cmd, data = msg.split(':',1)
+        except ValueError:
+            cmd = msg
+            data = ""
+        try:
+            if cmd==protocol.error:
+                if self.state==ClientStatus.ident:
+                    print "Error, nick already in use, please use a different one!"
+                else:
+                    print "Error from server cmd:%s, data:%s" %(cmd,data)
+                raise ProtocolViolation,"Server said error"
+            elif cmd==protocol.ok:
+                if len(self.command_stack)==0:
+                    print "Got ok, when it was not expected!"
+                    raise ProtocolViolation,"Ok not expected"
+                op=self.command_stack.pop()
+                if op!=protocol.ok:
+                    print "Expected response was %s, but got %s" %(op,protocol.ok)
+                    raise ProtocolViolation,"Unexpected response from server"
+                if self.state==ClientStatus.new:
+                    self.state=ClientStatus.ident
+                    self.setNick(self.nick)
+                elif self.state==ClientStatus.ident:
+                    self.state=ClientStatus.register
+                    
+        except ProtocolViolation,e:
+            print e
+            self.usershutdown()
+
 
     def sendBcastMsg(self,msg):
         """
         Send a broadcast message
         """
-        self.command_stack.append(protocol.bcast)
-        self.sendCmd(protocol.bcast + " " + data)
+        self.command_stack.append(protocol.ok)
+        self.sendCmd(protocol.bcast + " " + msg)
     
     def signalHandler(self,num,frame):
         """
