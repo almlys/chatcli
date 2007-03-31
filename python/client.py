@@ -52,6 +52,7 @@ class client(object):
     keep_running = True
     state = ClientStatus.new
     command_stack = []
+    pm_stack = []
 
     def __init__(self,login="anonymous",server=("localhost",8642),lhost="",lport=7766,buf=4096):
         """
@@ -223,9 +224,9 @@ class client(object):
 
         elif self.state == ClientStatus.register:
             if cmd=="todos":
-                self.sendBcastMsg(data)
+                self.sendBcastMsg(data.strip())
             else:
-                print "data: ",data
+                self.sendp2pMsg(cmd,data.strip())
         else:
             print "Error, Cannot send a message, because the client is still not registered"
         self.writePrompt()
@@ -259,6 +260,19 @@ class client(object):
                     self.setNick(self.nick)
                 elif self.state==ClientStatus.ident:
                     self.state=ClientStatus.register
+            elif cmd==protocol.answer:
+                if len(self.pm_stack)==0:
+                    print "Got answer, when it was not expected!"
+                    raise ProtocolViolation,"Answer not exepected"
+                op=self.command_stack.pop()
+                if op!=protocol.answer:
+                    print "Expected response was %s, but got %s" %(op,protocol.ok)
+                    raise ProtocolViolation,"Unexpected response from server"
+                try:
+                    ip, port = data.split(' ')
+                    self.sendp2pMsg2peer((ip,int(port)),self.pm_stack.pop())
+                except ValueError:
+                    raise ProtocolViolation,"Syntax error in server response"
             elif cmd==protocol.bcast:
                 print ""
                 print data
@@ -275,7 +289,23 @@ class client(object):
         """
         self.command_stack.append(protocol.ok)
         self.sendCmd(protocol.bcast + " " + msg)
-    
+
+    def sendp2pMsg(self,nick,msg):
+        """
+        Send a Private Message by p2p
+        """
+        self.command_stack.append(protocol.answer)
+        self.sendCmd(protocol.query + " " + nick)
+        self.pm_stack.append(msg)
+
+    def sendp2pMsg2peer(self,addr,msg):
+        """
+        Send a message to the specified address by UDP
+        @param addr Address
+        @param msg Message to send
+        """
+        self.udpsocket.sendto(msg,0,addr)
+
     def signalHandler(self,num,frame):
         """
         A signal handler
