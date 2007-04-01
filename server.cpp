@@ -61,7 +61,11 @@ server::server(const string lhost,const U16 lport,const Byte backlog) {
 
 server::~server() {
 	cout<<"Destroying all clients..."<<endl;
+	broadcast("The server is dying...");
 	delete _clients;
+	if(close(_socket)!=0) {
+		throw errorException("close");
+	}
 }
 
 void server::setBindAddress(const string lhost,const U16 lport) {
@@ -104,9 +108,10 @@ void server::startOp() {
 }
 
 void server::stopOp() {
-	if(close(_socket)!=0) {
+	/*if(close(_socket)!=0) {
 		throw errorException("close");
 	}
+*/
 }
 
 void server::broadcast(const char * msg,const clientSession * client) {

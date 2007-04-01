@@ -156,7 +156,11 @@ sessionMGR::sessionMGR(server * parent) {
 }
 
 sessionMGR::~sessionMGR() {
-
+	std::map<int,clientSession *>::iterator iter;
+	while(!_sockets.empty()) {
+		iter = _sockets.begin();
+		remove(iter->second);
+	}
 }
 
 std::map<int,clientSession *> & sessionMGR::getAllClients() {
@@ -185,7 +189,8 @@ void sessionMGR::add(int sock,U32 addr) {
 }
 
 void sessionMGR::remove(clientSession * client,bool closeme) {
-	if(closeme && close(client->fileno())!=0) throw errorException("close");
+	printf("close %i\n",client->fileno());
+	if(closeme && close(client->fileno())!=0) throw errorException("close client");
 	std::cout<<"Client "<<client->getAddr()<<" disconnected"<<std::endl;
 	_parent->_select.unregister(client->fileno());
 	if(client->getName()!=NULL) {
