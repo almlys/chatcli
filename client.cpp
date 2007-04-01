@@ -67,7 +67,7 @@ void help(void) {
 }
 
 /// Send message with udp
-int sendudp(char * buf, char * msg,int sockudp) {
+int sendudp(char * buf, char * msg, int sockudp, string user) {
 	int len;
 	len=strlen(buf)-1;
 	while (buf[len]=='\n' || buf[len]=='\r') {
@@ -112,7 +112,10 @@ int sendudp(char * buf, char * msg,int sockudp) {
 			bzero(&(their_addr_udp.sin_zero), 8); /* pone en cero el resto */
 		
 			/* enviamos el mensaje */
-			if ((numbytes=sendto(sockudp,msg,strlen(msg),0,(struct sockaddr *)&their_addr_udp, sizeof(struct sockaddr))) == -1) {
+			string message=msg;
+			string buf=protocol::pm;
+			buf+=" "+user+" says: "+message+protocol::sep;
+			if ((numbytes=sendto(sockudp,buf.c_str(),strlen(buf.c_str()),0,(struct sockaddr *)&their_addr_udp, sizeof(struct sockaddr))) == -1) {
 				perror("sendto");
 				exit(1);
 			}
@@ -156,7 +159,7 @@ int processmsg(int sock, char * buf){
 }
 
 /// Process recived data of the user
-unsigned char processdata(int sock, char * buf,int sockudp) {
+unsigned char processdata(int sock, char * buf,int sockudp, string user) {
 	int len;
 	len=strlen(buf)-1;
 	while (buf[len]=='\n' || buf[len]=='\r') {
@@ -200,7 +203,7 @@ unsigned char processdata(int sock, char * buf,int sockudp) {
 		out+=" "+str1+protocol::sep;
 		sendmsg(sock, out.c_str());
 		processmsg(sock, buf);
-		sendudp(buf, (char *) str2.c_str(),sockudp);
+		sendudp(buf, (char *) str2.c_str(),sockudp, user);
 	}
 
 	return 1;
@@ -218,7 +221,7 @@ unsigned char prodataserver(int sock, char * buf) {
 	string str1;
 	string str2;
 	string::size_type pos;
-	pos=req.find(": ", 0);
+	pos=req.find(" ", 0);
 	if(pos==std::string::npos) {
 		str1=req;
 	} else {
@@ -234,8 +237,12 @@ unsigned char prodataserver(int sock, char * buf) {
 		out+=protocol::sep;
 		sendmsg(sock,out.c_str());
 		return 0;
-	}else{
+	}else if (str1==protocol::pm){
 		cout<<str2<<endl;
+	}else if (str1==protocol::bcast){
+		cout<<endl<<str2<<endl;
+	}else {
+		cout<<"ERROR"<<endl;
 	}
 	writePrompt();
 	return 1;
@@ -364,7 +371,7 @@ int main(int argc, char *argv[]) {
 				exit(-1);
 			}
 			buf[numbytes]=0;
-			keep_running = processdata(sockfd, buf,sockudp);
+			keep_running = processdata(sockfd, buf, sockudp, user);
 			memset(buf,0,sizeof(buf));
 		} else if(FD_ISSET(sockfd,&readfs)) {
 			// Datos recibidos por el socket del servidor
@@ -389,9 +396,10 @@ int main(int argc, char *argv[]) {
 				exit(1);
 			}
 			/* Se visualiza lo recibido */
-			buf[numbytes] = '\0';
-			printf("\n%s:%i: %s\n",inet_ntoa(their_addr.sin_addr), ntohs(their_addr.sin_port), buf);
-			writePrompt();
+			buf[numbytes]=0;
+			printf("\nFrom %s:%i: ",inet_ntoa(their_addr.sin_addr), ntohs(their_addr.sin_port));
+			keep_running = prodataserver(sockfd,buf);
+			memset(buf,0,sizeof(buf));
 		} else {
 			cout<<"Datos recibidos por otro descriptor, o se produjo alguna señal."<<endl;
 		}
