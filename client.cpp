@@ -144,7 +144,7 @@ int sendmsg(int sock, const char * buf){
 	return 0;
 }
 /// Process recived message
-int processmsg(int sock, char * buf){
+int receivemsg(int sock, char * buf){
 	int sn;
 	memset(buf,0,sizeof(buf));
 	if ((sn=recv(sock, buf, MAXDATASIZE-1, 0)) == -1) {
@@ -153,9 +153,10 @@ int processmsg(int sock, char * buf){
 	}
 	if(sn==0) {
 		cout<<"El servidor cerro la conexion"<<endl;
+		return 0;
 	}
-	buf[sn] = '\0';
-	return 0;
+	buf[sn]=0;
+	return 1;
 }
 
 /// Process recived data of the user
@@ -202,7 +203,7 @@ unsigned char processdata(int sock, char * buf,int sockudp, string user) {
 		out=protocol::query;
 		out+=" "+str1+protocol::sep;
 		sendmsg(sock, out.c_str());
-		processmsg(sock, buf);
+		receivemsg(sock, buf);
 		sendudp(buf, (char *) str2.c_str(),sockudp, user);
 	}
 
@@ -230,7 +231,7 @@ unsigned char prodataserver(int sock, char * buf) {
 	}
 	//cout<<"Rebut del servidor, command: "<<str1<<", data: "<<str2<<endl;
 	if(str1==protocol::ok){
-		cout<<"OK"<<endl;
+		;
 	} else if (str1==protocol::error){
 		cout<<"ERROR"<<endl;
 		out=protocol::exit;
@@ -330,7 +331,7 @@ int main(int argc, char *argv[]) {
 	string out=protocol::helo;
 	out+=protocol::sep;
 	sendmsg(sockfd, out.c_str());
-	processmsg(sockfd,buf);
+	receivemsg(sockfd,buf);
 	if(!strncmp(buf,"200",3)){
 		cout<<"ERROR Identificacio"<<endl;
 	}
@@ -338,7 +339,7 @@ int main(int argc, char *argv[]) {
 	out=protocol::register2;
 	out+=" "+user+" "+port+" "+protocol::sep;
 	sendmsg(sockfd, out.c_str());
-	processmsg(sockfd,buf);
+	receivemsg(sockfd,buf);
 	if(!strncmp(buf,"200",3)){
 		cout<<"ERROR Registre"<<endl;
 	}
@@ -375,16 +376,7 @@ int main(int argc, char *argv[]) {
 			memset(buf,0,sizeof(buf));
 		} else if(FD_ISSET(sockfd,&readfs)) {
 			// Datos recibidos por el socket del servidor
-			if ((numbytes=recv(sockfd, buf, MAXDATASIZE-1, 0)) == -1) {
-				perror("recv");
-				exit(-1);
-			}
-			if(numbytes==0) {
-				cout<<"El servidor cerro la conexion"<<endl;
-				keep_running=0;
-				continue;
-			}
-			buf[numbytes]=0;
+			keep_running = receivemsg(sockfd, buf);
 			keep_running = prodataserver(sockfd,buf);
 			memset(buf,0,sizeof(buf));
 		}  else if(FD_ISSET(sockudp,&readfs)) {
@@ -397,7 +389,7 @@ int main(int argc, char *argv[]) {
 			}
 			/* Se visualiza lo recibido */
 			buf[numbytes]=0;
-			printf("\nFrom %s:%i: ",inet_ntoa(their_addr.sin_addr), ntohs(their_addr.sin_port));
+			printf("\nPrivate from %s:%i: ",inet_ntoa(their_addr.sin_addr), ntohs(their_addr.sin_port));
 			keep_running = prodataserver(sockfd,buf);
 			memset(buf,0,sizeof(buf));
 		} else {
