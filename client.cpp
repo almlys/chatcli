@@ -33,6 +33,7 @@
 ******************************************************************************/
 #include <iostream>
 #include <string>
+#include <sstream>
 
 #include <errno.h>
 #include <sys/socket.h>
@@ -45,7 +46,6 @@
 using namespace std;
 
 #define PORT 8642 // the port client will be connecting to 
-#define UDP_PORT 7766 // udp p2p port
 
 #define MAXDATASIZE 1025 // max number of bytes we can get at once 
 
@@ -67,7 +67,7 @@ void help(void) {
 }
 
 /// Send message with udp
-int sendudp(char * buf, char * msg,int sockfdudp) {
+int sendudp(char * buf, char * msg,int sockudp) {
 	int len;
 	len=strlen(buf)-1;
 	while (buf[len]=='\n' || buf[len]=='\r') {
@@ -85,32 +85,38 @@ int sendudp(char * buf, char * msg,int sockfdudp) {
 		data=req.substr(pos+1);
 	}
 	//cout<<"Processing request, command: "<<cmd<<",data: "<<data<<endl;
-	const char * ip=NULL;
-	if(data!="") ip=data.c_str();
+	string ip, port;
 	
 	if(cmd=="500") { //Identificacio
 		//cout<<"Intentat enviar missatge privat..."<<endl;
 		if (data!="null") {
+			pos=data.rfind(" ");
+			ip=data.substr(0,pos);
+			port=data.substr(pos+1);
 			struct sockaddr_in their_addr_udp; /* almacenara la direccion IP y numero de puerto del servidor */
 			struct hostent *he_udp; /* para obtener nombre del host */
 			int numbytes; /* conteo de bytes a escribir */
 			/* convertimos el hostname a su direccion IP */
-			if ((he_udp=gethostbyname(ip)) == NULL) {
+			if ((he_udp=gethostbyname(ip.c_str())) == NULL) {
 				herror("gethostbyname");
 				exit(1);
 			}
 		
 			/* a donde mandar */
+			std::istringstream i(port);
+   			int p;
+			i >> p;
 			their_addr_udp.sin_family = AF_INET; /* usa host byte order */
-			their_addr_udp.sin_port = htons(UDP_PORT); /* usa network byte order */
+			their_addr_udp.sin_port = htons(p); /* usa network byte order */
 			their_addr_udp.sin_addr = *((struct in_addr *)he_udp->h_addr);
 			bzero(&(their_addr_udp.sin_zero), 8); /* pone en cero el resto */
 		
 			/* enviamos el mensaje */
-			if ((numbytes=sendto(sockfdudp,msg,strlen(msg),0,(struct sockaddr *)&their_addr_udp, sizeof(struct sockaddr))) == -1) {
+			if ((numbytes=sendto(sockudp,msg,strlen(msg),0,(struct sockaddr *)&their_addr_udp, sizeof(struct sockaddr))) == -1) {
 				perror("sendto");
 				exit(1);
 			}
+			writePrompt();
 			//cout<<"Missatge enviat correctament."<<endl;
 		} else {
 			cout<<"No s'ha pogut enviar el privat. El client no existeix."<<endl;
@@ -235,8 +241,8 @@ unsigned char prodataserver(int sock, char * buf) {
 	return 1;
 }
 
-int startupc(){
-	int sockudp; /* descriptor para el socket */
+int * startudp(){
+	int sockudp;
 	struct sockaddr_in my_addr; /* direccion IP y numero de puerto local */
 	
 	/* se crea el socket */
@@ -247,7 +253,7 @@ int startupc(){
 
 	/* Se establece la estructura my_addr para luego llamar a bind() */
 	my_addr.sin_family = AF_INET; /* usa host byte order */
-	my_addr.sin_port = htons(UDP_PORT); /* usa network byte order */
+	my_addr.sin_port = htons(0); /* assginem port aleatori */
 	my_addr.sin_addr.s_addr = INADDR_ANY; /* escuchamos en todas las IPs */
 	bzero(&(my_addr.sin_zero), 8); /* rellena con ceros el resto de la estructura */
 
@@ -256,7 +262,16 @@ int startupc(){
 		perror("bind");
 		exit(1);
 	}
-	return sockudp;
+	
+	//Get port udp
+	socklen_t my_addr_size=sizeof(struct sockaddr);
+	if(getsockname(sockudp,(struct sockaddr *)&my_addr,&my_addr_size) == -1) {
+		perror("getsockname");
+	}
+	int * aux;
+	aux[0]=sockudp;
+	aux[1]=ntohs(my_addr.sin_port);
+	return aux;
 }
 
 int main(int argc, char *argv[]) {
@@ -287,7 +302,12 @@ int main(int argc, char *argv[]) {
 	    exit(-1);
 	}
 
-	sockudp = startupc();
+	int * aux;
+	aux = startudp();
+	sockudp=aux[0];
+	std::ostringstream o;
+	o << aux[1];
+	string port = o.str();
 
 	their_addr.sin_family = AF_INET;    // host byte order 
 	their_addr.sin_port = htons(PORT);  // short, network byte order 
@@ -309,8 +329,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	out=protocol::register2;
-	out+=" "+user+protocol::sep;
-	//out+=" "+user+port+protocol::sep;
+	out+=" "+user+" "+port+" "+protocol::sep;
 	sendmsg(sockfd, out.c_str());
 	processmsg(sockfd,buf);
 	if(!strncmp(buf,"200",3)){
@@ -371,7 +390,7 @@ int main(int argc, char *argv[]) {
 			}
 			/* Se visualiza lo recibido */
 			buf[numbytes] = '\0';
-			printf("%s: %s\n",inet_ntoa(their_addr.sin_addr), buf);
+			printf("\n%s:%i: %s\n",inet_ntoa(their_addr.sin_addr), ntohs(their_addr.sin_port), buf);
 			writePrompt();
 		} else {
 			cout<<"Datos recibidos por otro descriptor, o se produjo alguna señal."<<endl;
