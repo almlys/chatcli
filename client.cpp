@@ -49,14 +49,21 @@ using namespace std;
 
 #define MAXDATASIZE 1025 // max number of bytes we can get at once 
 
+/// Show client prompt
+void writePrompt(){
+	cout<<"cliente > ";
+	fflush(stdout);
+}
+
 /// Show client usage information
 void help(void) {
         printf("USO DEL CLIENTE:\n\
- usr: msg  -  Se manda el mensage 'msg' al usuairo 'usr'.\n\
- all: msg  -  Se manda el mensage 'msg' a todos los usuarios conecados.\n\
+ <usr>: <msg>  -  Se manda el mensage 'msg' al usuairo 'usr'.\n\
+ todos: <msg>  -  Se manda el mensage 'msg' a todos los usuarios conecados.\n\
  ayuda  -  Muestra este menu.\n\
  salir  -  Finalizamos la ejecucion del programa. \n\
 \n");
+	writePrompt();
 }
 
 /// Send message with udp
@@ -77,12 +84,12 @@ int sendudp(char * buf, char * msg,int sockfdudp) {
 		cmd=req.substr(0,pos);
 		data=req.substr(pos+1);
 	}
-	cout<<"Processing request, command: "<<cmd<<",data: "<<data<<endl;
+	//cout<<"Processing request, command: "<<cmd<<",data: "<<data<<endl;
 	const char * ip=NULL;
 	if(data!="") ip=data.c_str();
 	
 	if(cmd=="500") { //Identificacio
-		cout<<"Intentat enviar missatge privat..."<<endl;
+		//cout<<"Intentat enviar missatge privat..."<<endl;
 		if (data!="null") {
 			struct sockaddr_in their_addr_udp; /* almacenara la direccion IP y numero de puerto del servidor */
 			struct hostent *he_udp; /* para obtener nombre del host */
@@ -104,9 +111,10 @@ int sendudp(char * buf, char * msg,int sockfdudp) {
 				perror("sendto");
 				exit(1);
 			}
-			cout<<"Missatge enviat correctament."<<endl;
+			//cout<<"Missatge enviat correctament."<<endl;
 		} else {
 			cout<<"No s'ha pogut enviar el privat. El client no existeix."<<endl;
+			writePrompt();
 		}
 	}
 
@@ -135,7 +143,7 @@ int processmsg(int sock, char * buf){
 		exit(-1);
 	}
 	if(sn==0) {
-		printf("El servidor cerró la conexión\n");
+		cout<<"El servidor cerro la conexion"<<endl;
 	}
 	buf[sn] = '\0';
 	return 0;
@@ -149,7 +157,7 @@ unsigned char processdata(int sock, char * buf,int sockudp) {
 		buf[len--]='\0';
 	}
 	//printf("Processing request: %s<-\n",buf);
-	string req=buf;
+	string req=buf, out;
 	string str1;
 	string str2;
 	string::size_type pos;
@@ -160,35 +168,72 @@ unsigned char processdata(int sock, char * buf,int sockudp) {
 		str1=req.substr(0,pos);
 		str2=req.substr(pos+1);
 	}
-	cout<<"Processing request, command: "<<str1<<",data: "<<str2<<endl;
+	//cout<<"Processing request, command: "<<str1<<", data: "<<str2<<endl;
 
 	if(str2==""){
 		if(str1=="ayuda") { //Identificacio
 			help();
 		} else if(str1=="salir"){
 			cout<<"Cerrando..."<<endl;
+			out=protocol::exit;
+			out+=protocol::sep;
+			sendmsg(sock,out.c_str());
 			return 0;
 		} else {
-			cout<<"Comando desconocido"<<endl;
-			help();
+			cout<<"Comando desconocido. 'ayuda' pera mostra los comandos posibles."<<endl;
+			writePrompt();
 		}
 	} else if(str1=="todos"){
-		cout<<"Enviamos a todos..."<<endl;
-			sprintf(buf,"700 %s", str2.c_str());
-			sendmsg(sock,buf);
+		//cout<<"Enviamos a todos..."<<endl;
+			out=protocol::bcast;
+			out+=" "+str2+protocol::sep;
+			sendmsg(sock,out.c_str());
 	} else {
-		cout<<"Enviamos el privado..."<<endl;
-		string out=protocol::query;
+		//cout<<"Enviamos el privado..."<<endl;
+		out=protocol::query;
 		out+=" "+str1+protocol::sep;
 		sendmsg(sock, out.c_str());
 		processmsg(sock, buf);
-		cout<<buf<<endl;
 		sendudp(buf, (char *) str2.c_str(),sockudp);
 	}
 
 	return 1;
 }
 
+/// Process recived data of the server
+unsigned char prodataserver(int sock, char * buf) {
+	int len;
+	len=strlen(buf)-1;
+	while (buf[len]=='\n' || buf[len]=='\r') {
+		buf[len--]='\0';
+	}
+	//printf("Processing request: %s<-\n",buf);
+	string req=buf, out;
+	string str1;
+	string str2;
+	string::size_type pos;
+	pos=req.find(": ", 0);
+	if(pos==std::string::npos) {
+		str1=req;
+	} else {
+		str1=req.substr(0,pos);
+		str2=req.substr(pos+1);
+	}
+	//cout<<"Rebut del servidor, command: "<<str1<<", data: "<<str2<<endl;
+	if(str1==protocol::ok){
+		cout<<"OK"<<endl;
+	} else if (str1==protocol::error){
+		cout<<"ERROR"<<endl;
+		out=protocol::exit;
+		out+=protocol::sep;
+		sendmsg(sock,out.c_str());
+		return 0;
+	}else{
+		cout<<str2<<endl;
+	}
+	writePrompt();
+	return 1;
+}
 
 int startupc(){
 	int sockudp; /* descriptor para el socket */
@@ -214,7 +259,6 @@ int startupc(){
 	return sockudp;
 }
 
-
 int main(int argc, char *argv[]) {
 	int sockfd, sockudp, fdmax, numbytes;
 	char buf[MAXDATASIZE];
@@ -226,11 +270,10 @@ int main(int argc, char *argv[]) {
 	fd_set master;
 
 	string user, ips;
-	printf("Esperando un identificador de usuario: ");
+	cout<<"cliente > "<<"Esperando un identificador de usuario: ";
 	cin>>user;
-	printf("Esperando la direccion de un servidor: ");
+	cout<<"cliente > "<<"Esperando la direccion de un servidor: ";
 	cin>>ips;
-	cout<<"Conexion, identificacion y registro, serv: "<<ips<<", usuario: "<<user<<endl;
 	const char * ip=NULL;
 	if(ips!="") ip=ips.c_str();
 
@@ -257,25 +300,24 @@ int main(int argc, char *argv[]) {
 	    exit(-1);
 	}
 
-	cout<<"Identifikem"<<endl;
 	string out=protocol::helo;
 	out+=protocol::sep;
 	sendmsg(sockfd, out.c_str());
 	processmsg(sockfd,buf);
-	if(!strncmp(buf,"100",3)){
-		printf("Identificats correctament\n");
+	if(!strncmp(buf,"200",3)){
+		cout<<"ERROR Identificacio"<<endl;
 	}
 
-	cout<<"Registrem"<<endl;
 	out=protocol::register2;
 	out+=" "+user+protocol::sep;
 	//out+=" "+user+port+protocol::sep;
 	sendmsg(sockfd, out.c_str());
 	processmsg(sockfd,buf);
-	if(!strncmp(buf,"100",3)){
-		cout<<"Registrats correctament"<<endl;
+	if(!strncmp(buf,"200",3)){
+		cout<<"ERROR Registre"<<endl;
 	}
-	
+	cout<<"Conexion, identificacion y registro, serv: "<<ips<<", usuario: "<<user<<endl;
+
 	FD_ZERO(&readfs); //Inicializar
 	FD_ZERO(&master);
 
@@ -283,8 +325,9 @@ int main(int argc, char *argv[]) {
 	FD_SET(sockfd,&master); //Fijar el socket
 	FD_SET(sockudp,&master);
 
-	fdmax = sockudp;
+	writePrompt();
 
+	fdmax = sockudp;
 	while(keep_running) {
 		readfs=master;
 		if(select(fdmax+1,&readfs,NULL,NULL,NULL)==-1) {
@@ -311,16 +354,17 @@ int main(int argc, char *argv[]) {
 				exit(-1);
 			}
 			if(numbytes==0) {
-				printf("El servidor cerró la conexión\n");
+				cout<<"El servidor cerro la conexion"<<endl;
 				keep_running=0;
 				continue;
 			}
-			buf[numbytes] = '\0';
-		
+			buf[numbytes]=0;
+			keep_running = prodataserver(sockfd,buf);
+			memset(buf,0,sizeof(buf));
 		}  else if(FD_ISSET(sockudp,&readfs)) {
 			/* Se reciben los datos (directamente, UDP no necesita conexi�) */
 			socklen_t addr_len = sizeof(struct sockaddr);
-			printf("Esperando datos ....\n");
+			//printf("Esperando datos ....\n");
 			if ((numbytes=recvfrom(sockudp, buf, MAXDATASIZE-1, 0, (struct sockaddr *)&their_addr, &addr_len)) == -1) {
 				perror("recvfrom");
 				exit(1);
@@ -328,6 +372,7 @@ int main(int argc, char *argv[]) {
 			/* Se visualiza lo recibido */
 			buf[numbytes] = '\0';
 			printf("%s: %s\n",inet_ntoa(their_addr.sin_addr), buf);
+			writePrompt();
 		} else {
 			cout<<"Datos recibidos por otro descriptor, o se produjo alguna señal."<<endl;
 		}
