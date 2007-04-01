@@ -36,6 +36,7 @@
 #include <exception>
 #include <queue>
 #include <map>
+#include <sstream>
 
 #include <errno.h>
 #include <sys/socket.h>
@@ -66,6 +67,14 @@ const char * clientSession::getName() const {
 
 void clientSession::setName(const char * name) {
 	_name=name;
+}
+
+void clientSession::setPort(U16 port) {
+	_udpport=port;
+}
+
+U16 clientSession::getUdpPort() {
+	return _udpport;
 }
 
 const char * clientSession::getAddr() const {
@@ -199,7 +208,7 @@ clientSession * sessionMGR::find(int sock) {
 	return _sockets[sock];
 }
 
-void sessionMGR::register2(clientSession * client,const char * nick) {
+void sessionMGR::register2(clientSession * client,const char * nick,int port) {
 	if(_nicks.find(nick) != _nicks.end()) {
 		throw protocolViolation("NickAlreadyExists!");
 	}
@@ -217,15 +226,21 @@ void sessionMGR::register2(clientSession * client,const char * nick) {
 	}
 	client->rcvRegister();
 	client->setName(nick);
+	client->setPort(port);
 	_nicks[client->getName()]=client;
 }
 
-const char * sessionMGR::findAddress(const char * nick) {
+std::string & sessionMGR::findAddress(const char * nick) {
 	if(_nicks.find(nick) != _nicks.end()) {
-		return _nicks[nick]->getAddr();
+		_tmp_msg=_nicks[nick]->getAddr();
+		_tmp_msg+=" ";
+		std::ostringstream o;
+		if (!(o << _nicks[nick]->getUdpPort())) throw protocolViolation("Error converting an unsigned int to a string");
+		_tmp_msg+=o.str();
 	} else {
-		return "null";
+		_tmp_msg="null";
 	}
+	return _tmp_msg;
 }
 
 //END sessionMGR

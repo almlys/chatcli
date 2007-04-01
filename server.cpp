@@ -131,7 +131,7 @@ void server::broadcast(const char * msg,const clientSession * client) {
 
 
 /// Process a client request
-int server::proccessRequest(clientSession * client,const string req) {
+void server::proccessRequest(clientSession * client,const string req) {
 	//int len;
 	/*len=strlen(buf)-1;
 	while (buf[len]=='\n' || buf[len]=='\r') {
@@ -149,20 +149,34 @@ int server::proccessRequest(clientSession * client,const string req) {
 		cmd=req.substr(0,pos);
 		data=req.substr(pos+1);
 	}
+	const char * strip_chars=" \t";
+	pos = data.find_first_not_of(strip_chars);
+	data.erase(0,pos);
+	pos = data.find_last_not_of(strip_chars);
+	data.erase(pos+1);
 	cout<<"Processing request, command: "<<cmd<<",data: "<<data<<endl;
-	const char * nick=NULL;
-	if(data!="") nick=data.c_str();
+	string nick;
+	string port;
+	string msg;
 
 	if(cmd==protocol::helo && !client->isHallowed()) { //Identificacio
 		client->rcvHello();
 		client->sendOk("OK");
-	} else if ((client->isHallowed() || client->isRegistered()) && nick!=NULL && cmd==protocol::register2) { //Registre
-		_clients->register2(client,nick);
+	} else if ((client->isHallowed() || client->isRegistered()) && cmd==protocol::register2) { //Registre
+		pos=data.rfind(" ");
+		if(pos==string::npos) throw protocolViolation("Syntax error, expecting whitespace");
+		port = data.substr(pos+1);
+		nick = data.substr(0,pos);
+		if(nick=="" || port=="") throw protocolViolation("Syntax error, empty port or nick");
+		U16 iport=atoi(port.c_str());
+		if(iport==0) throw protocolViolation("Wrong port");
+		_clients->register2(client,nick.c_str(),iport);
 		client->sendOk("OK");
-	} else if (client->isRegistered() && nick!=NULL && cmd==protocol::query) { //Pregunta
-		client->sendanswer(_clients->findAddress(nick));
+	} else if (client->isRegistered() && cmd==protocol::query) { //Pregunta
+		nick=data;
+		if(nick=="") throw protocolViolation("Syntax error, empty nick");
+		client->sendanswer(_clients->findAddress(nick.c_str()).c_str());
 	} else if (client->isRegistered() && cmd==protocol::bcast) { //Difusio
-		string msg;
 		msg+=client->getName();
 		msg+=" says: ";
 		msg+=data;
@@ -176,7 +190,6 @@ int server::proccessRequest(clientSession * client,const string req) {
 		_clients->remove(client);
 	}
 
-	return 0;
 }
 
 void server::requestLoop() {

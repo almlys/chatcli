@@ -49,6 +49,7 @@ private:
 	U32 _addr;
 	std::string _name;
 	ClientStatus _status;
+	U16 _udpport;
 public:
 	//Begin dirty list
 	PartialDataReader _partialData;
@@ -90,8 +91,16 @@ public:
 	void rcvRegister();
 
 	/// Sets this client nickname
-	/// @param name
+	/// @param name The name
 	void setName(const char * name);
+
+	/// Sets the port
+	/// @param port The port
+	void setPort(U16 port);
+
+	/// Returns the udp client port
+	/// @returns the port
+	U16 getUdpPort();
 
 	/// Gets this client name
 	/// @return pointer to the string that conatins the name
@@ -122,6 +131,7 @@ private:
 	//std::map<U32,clientSession *> _clients;
 	std::map<std::string,clientSession *> _nicks;
 	std::map<int,clientSession *> _sockets;
+	std::string _tmp_msg;
 public:
 
 	/// Constructor
@@ -147,6 +157,7 @@ public:
 
 	/// Removes a client by its session object
 	/// @param client The pointer to the client object
+	/// @param closeme If true, it will close the descriptor
 	/// @note This destroys (deletes) the client, working with client
 	/// @note after this call, will evolve into a nice Segmentation Fault
 	void remove(clientSession * client,bool closeme=true);
@@ -154,12 +165,13 @@ public:
 	/// Associates a nick to a client
 	/// @param client The pointer to the client object
 	/// @param name Name of the client
-	void register2(clientSession * client,const char * name);
+	/// @param port Udp port of the client
+	void register2(clientSession * client,const char * name,int port);
 
 	/// Returns the address associated to a nickname
 	/// @param name The nickname
 	/// @return Formated ip address, prepared to be sent back to the client
-	const char * findAddress(const char * name);
+	std::string & findAddress(const char * name);
 
 	/// Gets a list of all connected clients to this system
 	/// @return a Map with all connected clients

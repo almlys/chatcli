@@ -159,8 +159,12 @@ class server(object):
                 if len(data)==0:
                     self.clients.remove(client)
                     continue
-                for req in client.partialData.feed(data):
-                    self.processRequest(client,req)
+                try:
+                    for req in client.partialData.feed(data):
+                        self.processRequest(client,req)
+                except socket.error,e:
+                    print "socket:error: " , e
+                    self.clients.remove(client)
 
     def processRequest(self,client,msg):
         """
