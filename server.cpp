@@ -154,8 +154,8 @@ int server::proccessRequest(clientSession * client,const string req) {
 	if(data!="") nick=data.c_str();
 
 	if(cmd==protocol::helo && !client->isHallowed()) { //Identificacio
-		client->sendOk("OK");
 		client->rcvHello();
+		client->sendOk("OK");
 	} else if ((client->isHallowed() || client->isRegistered()) && nick!=NULL && cmd==protocol::register2) { //Registre
 		_clients->register2(client,nick);
 		client->sendOk("OK");
