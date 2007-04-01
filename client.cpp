@@ -268,7 +268,7 @@ int * startudp(){
 	if(getsockname(sockudp,(struct sockaddr *)&my_addr,&my_addr_size) == -1) {
 		perror("getsockname");
 	}
-	int * aux;
+	static int aux[2];
 	aux[0]=sockudp;
 	aux[1]=ntohs(my_addr.sin_port);
 	return aux;
