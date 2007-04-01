@@ -80,7 +80,7 @@ public:
 	/// Process a single request
 	/// @param client Pointer to the associated client session
 	/// @param buf Buffer with data to process
-	int proccessRequest(clientSession * client,char * buf);
+	int proccessRequest(clientSession * client,const std::string req);
 
 	/// Sends a broadcast message
 	/// @param msg The message to send

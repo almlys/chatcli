@@ -50,6 +50,8 @@ PartialDataReader::PartialDataReader(bool emptycmds) {
 
 std::queue<std::string> & PartialDataReader::feed(const char * idata) {
 
+	while(!_outcmds.empty()) _outcmds.pop();
+
 	if (_debug) printf("Partial data %s\n",idata);
 
 	std::string data = _partialData;
@@ -70,12 +72,15 @@ std::queue<std::string> & PartialDataReader::feed(const char * idata) {
 			pos = pos2!=string::npos && pos2<pos ? pos2 : pos;
 		}
 		if (pos==data.size()) {
-			if (_debug) printf("Notice: Not all data was recieved, waiting for protocol separator");
+			if (_debug) printf("Notice: Not all data was recieved, waiting for protocol separator\n");
 			_partialData = data;
 			break;
 		}
-		sep_state=req[pos];
+		//if (_debug) printf("pos is %i\n",pos);
+		sep_state=data[pos];
+		//if (_debug) printf("Sep_state %02X,%02X\n",_sep_state,sep_state);
 		req = data.substr(0,pos);
+		//if (_debug) std::cout<<"Request: "<<req<<std::endl;
 		if (pos+1 < data.size()) {
 			data = data.substr(pos+1);
 		} else {
@@ -87,9 +92,12 @@ std::queue<std::string> & PartialDataReader::feed(const char * idata) {
 			pos2 = req.find_last_not_of(stripchars);
 			req.erase(pos2+1);
 		} else req="";
+		//if (_debug) std::cout<<"Request (end): "<<req<<std::endl;
 		if (req.size()==0 && sep_state!=_sep_state && _sep_state!=0) continue;
+		//if (_debug) printf("Sep_state %02X,%02X\n",_sep_state,sep_state);
 		_sep_state = sep_state;
 		if (_emptycmds && req.size()==0) continue;
+		//if (_debug) std::cout<<"Request (push): "<<req<<std::endl;
 		_outcmds.push(req);
 	}
 	return _outcmds;

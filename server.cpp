@@ -131,14 +131,14 @@ void server::broadcast(const char * msg,const clientSession * client) {
 
 
 /// Process a client request
-int server::proccessRequest(clientSession * client,char * buf) {
-	int len;
-	len=strlen(buf)-1;
+int server::proccessRequest(clientSession * client,const string req) {
+	//int len;
+	/*len=strlen(buf)-1;
 	while (buf[len]=='\n' || buf[len]=='\r') {
 		buf[len--]='\0';
-	}
+	}*/
 	//printf("Processing request: %s<-\n",buf);
-	string req=buf;
+	//string req=buf;
 	string cmd;
 	string data;
 	string::size_type pos;
@@ -213,10 +213,17 @@ void server::requestLoop() {
 			//printf("Received: %s",buf);
 			clientSession * cli=_clients->find(client);
 			try {
-				proccessRequest(cli,buf);
+				queue<string> reql = cli->_partialData.feed(buf);
+				while(!reql.empty()) {
+					//cout<<"Processing request: "<<reql.front()<<endl;
+					proccessRequest(cli,reql.front().c_str());
+					reql.pop();
+				}
 			} catch(exception &e) {
 				cout<<"Notice: Exception proccessig a request: "<<e.what()<<endl;
-				cli->senderror("error");
+				try {
+					cli->senderror("error");
+				} catch(errorException &e) {}
 				_clients->remove(client);
 			}
 		}

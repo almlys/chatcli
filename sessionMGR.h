@@ -35,6 +35,7 @@
 #define SESSIONMGR_H
 
 #include "protocol.h"
+#include "partialDataReader.h"
 
 /*
  Session Manager, please see reference at sessionMGR.py
@@ -49,6 +50,10 @@ private:
 	std::string _name;
 	ClientStatus _status;
 public:
+	//Begin dirty list
+	PartialDataReader _partialData;
+	//End dirty list
+
 	/// Session constructor
 	/// @param socket The socket
 	/// @param addr Host Byte order ip address

@@ -177,6 +177,7 @@ void sessionMGR::add(int sock,U32 addr) {
 
 void sessionMGR::remove(clientSession * client,bool closeme) {
 	if(closeme && close(client->fileno())!=0) throw errorException("close");
+	std::cout<<"Client "<<client->getAddr()<<" disconnected"<<std::endl;
 	_parent->_select.unregister(client->fileno());
 	if(client->getName()!=NULL) {
 		std::string out=client->getName();

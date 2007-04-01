@@ -1,3 +1,66 @@
+2007-03-31 22:17  josep
+
+	* client.cpp:
+
+2007-03-31 22:09  josep
+
+	* client.cpp:
+
+2007-03-31 19:55  alberto
+
+	* python/client.py: solo faltann las lecturas parciales y el
+	  sendall en el envio por udp
+
+2007-03-31 16:10  alberto
+
+	* python/client.py, python/partialDataReader.py, python/server.py,
+	  python/sessionMGR.py: kkkkkkkkkk
+
+2007-03-31 15:27  alberto
+
+	* python/client.py, python/partialDataReader.py:
+
+2007-03-31 14:51  alberto
+
+	* python/client.py, python/server.py: client wip
+
+2007-03-31 14:28  alberto
+
+	* python/client.py: client wip
+
+2007-03-31 13:45  alberto
+
+	* python: svn:ignore set
+
+2007-03-31 02:27  alberto
+
+	* Makefile, client.cpp, python/client.py, python/server.py,
+	  python/sessionMGR.py: work
+
+2007-03-30 17:01  alberto
+
+	* client.cpp, python/client.py: kk
+
+2007-03-30 16:28  alberto
+
+	* server.cpp, server.h: kk
+
+2007-03-30 15:37  josep
+
+	* client.cpp:
+
+2007-03-30 15:10  alberto
+
+	* server.cpp, server.h: arguments processed by the server
+
+2007-03-30 14:45  alberto
+
+	* server.h: ñac
+
+2007-03-30 14:39  alberto
+
+	* ChangeLog, countLines.sh: contador de línees
+
 2007-03-30 14:34  alberto
 
 	* server.h: well, docs done, no le'ts fix some buggggggs
