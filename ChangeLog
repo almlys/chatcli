@@ -1,3 +1,33 @@
+2007-04-01 09:54  alberto
+
+	* TODO, server.cpp, sessionMGR.cpp: Server cleanup fixed
+
+2007-04-01 09:34  alberto
+
+	* python/server.py, server.cpp, server.h, sessionMGR.cpp,
+	  sessionMGR.h: I think, that i, I think that I have, I have,
+	  finished, the, ..., I think that I have finished it, yes I think
+	  that...
+
+2007-04-01 02:05  alberto
+
+	* server.cpp: kkk
+
+2007-04-01 01:57  alberto
+
+	* ChangeLog, partialDataReader.cpp, server.cpp, server.h,
+	  sessionMGR.cpp, sessionMGR.h: tralala
+
+2007-04-01 00:53  alberto
+
+	* Makefile, partialDataReader.cpp, partialDataReader.h,
+	  python/TODO, server.cpp, sessionMGR.cpp, sessionMGR.h: Partial
+	  data reader implemented
+
+2007-03-31 22:49  alberto
+
+	* python/client.py: pyclient finished, or shoudl be
+
 2007-03-31 22:17  josep
 
 	* client.cpp:
