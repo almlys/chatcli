@@ -114,7 +114,7 @@ class server;
 class sessionMGR {
 private:
 	server * _parent;
-	std::map<U32,clientSession *> _clients;
+	//std::map<U32,clientSession *> _clients;
 	std::map<std::string,clientSession *> _nicks;
 	std::map<int,clientSession *> _sockets;
 public:
@@ -144,7 +144,7 @@ public:
 	/// @param client The pointer to the client object
 	/// @note This destroys (deletes) the client, working with client
 	/// @note after this call, will evolve into a nice Segmentation Fault
-	void remove(clientSession * client);
+	void remove(clientSession * client,bool closeme=true);
 
 	/// Associates a nick to a client
 	/// @param client The pointer to the client object
@@ -158,7 +158,7 @@ public:
 
 	/// Gets a list of all connected clients to this system
 	/// @return a Map with all connected clients
-	std::map<U32,clientSession *> & getAllClients();
+	std::map<int,clientSession *> & getAllClients();
 };
 
 #endif

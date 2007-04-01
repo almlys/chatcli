@@ -150,13 +150,13 @@ sessionMGR::~sessionMGR() {
 
 }
 
-std::map<U32,clientSession *> & sessionMGR::getAllClients() {
-	return _clients;
+std::map<int,clientSession *> & sessionMGR::getAllClients() {
+	return _sockets;
 }
 
 void sessionMGR::add(int sock,U32 addr) {
 	clientSession * cli = new clientSession(sock,addr);
-	if(_clients.find(addr) != _clients.end()) {
+	/*if(_clients.find(addr) != _clients.end()) {
 		printf("Found! deleting...\n");
 		try {
 			_clients[addr]->senddif("Sorry, only one connection per ip is accepted!");
@@ -164,14 +164,19 @@ void sessionMGR::add(int sock,U32 addr) {
 			std::cout<<"Exception sending data..."<<e.what()<<std::endl;
 		}
 		remove(_clients[addr]);
+	}*/
+	//_clients[addr]=cli;
+	if(_sockets.find(sock) != _sockets.end()) {
+		//This should not happen never!!!
+		std::cout<<"Something very strange and rare is happending!!!"<<std::endl;
+		remove(_sockets[sock]);
 	}
-	_clients[addr]=cli;
 	_sockets[sock]=cli;
 	_parent->_select.register2(sock);
 }
 
-void sessionMGR::remove(clientSession * client) {
-	if(close(client->fileno())!=0) throw errorException("close");
+void sessionMGR::remove(clientSession * client,bool closeme) {
+	if(closeme && close(client->fileno())!=0) throw errorException("close");
 	_parent->_select.unregister(client->fileno());
 	if(client->getName()!=NULL) {
 		std::string out=client->getName();
@@ -179,7 +184,7 @@ void sessionMGR::remove(clientSession * client) {
 		_parent->broadcast(out.c_str(),client);
 		_nicks.erase(client->getName());
 	}
-	_clients.erase(client->getIp());
+	//_clients.erase(client->getIp());
 	_sockets.erase(client->fileno());
 	delete client;
 }

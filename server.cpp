@@ -50,8 +50,9 @@
 #define MAXDATASIZE 4096
 //End hate list
 
+using namespace std;
 
-server::server(const std::string lhost,const U16 lport,const Byte backlog) {
+server::server(const string lhost,const U16 lport,const Byte backlog) {
 	_keep_running = true;
 	setBindAddress(lhost,lport);
 	_backlog = backlog;
@@ -59,11 +60,11 @@ server::server(const std::string lhost,const U16 lport,const Byte backlog) {
 }
 
 server::~server() {
-	std::cout<<"destructor"<<std::endl;
+	cout<<"Destroying all clients..."<<endl;
 	delete _clients;
 }
 
-void server::setBindAddress(const std::string lhost,const U16 lport) {
+void server::setBindAddress(const string lhost,const U16 lport) {
 	_bindAddr = lhost;
 	_bindPort = lport;
 }
@@ -98,7 +99,7 @@ void server::startOp() {
 		throw errorException("listen");
 	}
 
-	std::cout<<"DBG: Listening to incoming connections on tcp port "<<_bindPort<<std::endl;
+	cout<<"DBG: Listening to incoming connections on tcp port "<<_bindPort<<endl;
 	_select.register2(_socket);
 }
 
@@ -109,20 +110,20 @@ void server::stopOp() {
 }
 
 void server::broadcast(const char * msg,const clientSession * client) {
-	std::map<U32,clientSession *> clients;
+	map<int,clientSession *> clients;
 	clients=_clients->getAllClients();
-	std::map<U32,clientSession *>::iterator iter;
+	map<int,clientSession *>::iterator iter;
 	for(iter = clients.begin(); iter!=clients.end(); iter++) {
-		std::cout<<"Key: "<<iter->first<<std::endl;
+		cout<<"Key: "<<iter->first<<endl;
 		if((client==NULL || iter->second->fileno()!=client->fileno()) && iter->second->isRegistered()) {
-			std::string out = protocol::bcast;
+			string out = protocol::bcast;
 			out+= " ";
 			out+=msg;
 			out+=protocol::sep;
 			try {
 				iter->second->sendall(out.c_str());
 			} catch(errorException & e) {
-				std::cout<<"Exception sendind data... "<<e.what()<<std::endl;
+				cout<<"Exception sendind data... "<<e.what()<<endl;
 			}
 		}
 	}
@@ -137,18 +138,18 @@ int server::proccessRequest(clientSession * client,char * buf) {
 		buf[len--]='\0';
 	}
 	//printf("Processing request: %s<-\n",buf);
-	std::string req=buf;
-	std::string cmd;
-	std::string data;
-	std::string::size_type pos;
+	string req=buf;
+	string cmd;
+	string data;
+	string::size_type pos;
 	pos=req.find(" ", 0);
-	if(pos==std::string::npos) {
+	if(pos==string::npos) {
 		cmd=req;
 	} else {
 		cmd=req.substr(0,pos);
 		data=req.substr(pos+1);
 	}
-	std::cout<<"Processing request, command: "<<cmd<<",data: "<<data<<std::endl;
+	cout<<"Processing request, command: "<<cmd<<",data: "<<data<<endl;
 	const char * nick=NULL;
 	if(data!="") nick=data.c_str();
 
@@ -161,7 +162,7 @@ int server::proccessRequest(clientSession * client,char * buf) {
 	} else if (client->isRegistered() && nick!=NULL && cmd==protocol::query) { //Pregunta
 		client->sendanswer(_clients->findAddress(nick));
 	} else if (client->isRegistered() && cmd==protocol::bcast) { //Difusio
-		std::string msg;
+		string msg;
 		msg+=client->getName();
 		msg+=" says: ";
 		msg+=data;
@@ -179,12 +180,12 @@ int server::proccessRequest(clientSession * client,char * buf) {
 }
 
 void server::requestLoop() {
-	std::queue<int> read;
+	queue<int> read;
 	read = _select.wait();
 	while(!read.empty()) {
 		int client=read.front();
 		read.pop();
-		std::cout<<"Event on "<<client<<std::endl;
+		cout<<"Event on "<<client<<endl;
 		if(client==_socket) {
 			// accept (A new connection was accepted)
 			struct sockaddr_in client;
@@ -194,7 +195,7 @@ void server::requestLoop() {
 				throw errorException("accept");
 				//continue;
 			}
-			printf("server: got connection from %s , %d\n",inet_ntoa(client.sin_addr),csock);
+			printf("server: got connection from %s:%d , %d\n",inet_ntoa(client.sin_addr),ntohs(client.sin_port),csock);
 			_clients->add(csock,ntohl(client.sin_addr.s_addr));
 		} else {
 			// Data was recieved from a client
@@ -210,11 +211,12 @@ void server::requestLoop() {
 			}
 			buf[num] = '\0';
 			//printf("Received: %s",buf);
+			clientSession * cli=_clients->find(client);
 			try {
-				proccessRequest(_clients->find(client),buf);
-			} catch(std::exception &e) {
-				std::cout<<"Notice: Exception proccessig a request: "<<e.what()<<std::endl;
-				_clients->find(client)->senderror("error");
+				proccessRequest(cli,buf);
+			} catch(exception &e) {
+				cout<<"Notice: Exception proccessig a request: "<<e.what()<<endl;
+				cli->senderror("error");
 				_clients->remove(client);
 			}
 		}
@@ -224,32 +226,45 @@ void server::requestLoop() {
 void server::run() {
 	startOp();
 	while(_keep_running) {
-		requestLoop();
+		try {
+			requestLoop();
+		} catch(exception &e) {
+			cout<<"Exception in request loop: "<<e.what()<<endl;
+		}
 	}
 	stopOp();
 }
+
+//We should use a Singleton signal handler, but this will complicate things, we
+// have enough with this piece of crap.
+server * obj = NULL;
+void s_handler(int s) {
+	if(obj!=NULL) obj->signalHandler(s);
+}
+//end piece of big crap
 
 void server::signalHandler(int s) {
 	switch(s) {
 		case SIGTERM:
 		case SIGINT:
 			if(_keep_running==0) {
-				std::cout<<"Server killed!"<<std::endl;
+				cout<<"Server killed!"<<endl;
 				exit(-1);
 			}
-			std::cout<<"Shutting down server..."<<std::endl;
+			cout<<"Shutting down server..."<<endl;
 			_keep_running=0;
-			//signal(s,(void *)&signalHandler);
+			signal(s,s_handler);
 			break;
 		default:
-			std::cout<<"Error: Unexpected signal recieved!"<<std::endl;
+			cout<<"Error: Unexpected signal recieved!"<<endl;
 	}
 }
 
 void server::installSignalHandlers() {
-	//signal(SIGTERM, (void *)signalHandler);
-	//signal(SIGINT, (void *)signalHandler);
+	signal(SIGTERM, s_handler);
+	signal(SIGINT, s_handler);
 }
+
 
 /// Show server usage information
 /// @param pgname Program name
@@ -281,7 +296,7 @@ char parse_argv(struct mconfig * config, int argc, char * argv[]) {
 			config->daemon=1;
 		} else {
 			//usage(argv[0]); return -1;
-			std::cerr<<"\033[1;31mWarning:\033[0m Ignoring unknown command line param "<<argv[i]<<std::endl;
+			cerr<<"\033[1;31mWarning:\033[0m Ignoring unknown command line param "<<argv[i]<<endl;
 		}
 	}
 	return 0;
@@ -306,18 +321,20 @@ int main(int argc, char * argv[]) {
 		daemon(1,0);
 	}
 
-	std::cout<<std::endl;
-	std::cout<<"\033[0;36m/***************************************************************\\"<<std::endl;
-	std::cout<<          "|                IgAlJo C++ MAD server starting...              |"<<std::endl;
-	std::cout<<         "\\***************************************************************/\033[0m"<<std::endl;
-	std::cout<<std::endl<<"Presh Ctrl+C to stop execution"<<std::endl;
+	cout<<endl;
+	cout<<"\033[0;36m/***************************************************************\\"<<endl;
+	cout<<          "|                IgAlJo C++ MAD server starting...              |"<<endl;
+	cout<<         "\\***************************************************************/\033[0m"<<endl;
+	cout<<endl<<"Presh Ctrl+C to stop execution"<<endl;
 
 	try {
-		server * srv = new server();
+		server * srv = new server("",config.port,config.backlog);
+		obj=srv;
 		srv->run();
 		delete srv;
-	} catch(std::exception & e) {
-		std::cout<<"Exception: "<<e.what()<<std::endl;
+		obj=srv=NULL;
+	} catch(exception & e) {
+		cout<<"Exception: "<<e.what()<<endl;
 	}
 
 	return 0;
