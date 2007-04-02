@@ -13,3 +13,9 @@ Algunes notes:
 * Comentar també, que el nostre disseny suporta nicks amb Espais, pero que es poden desactivar (només a la versió Python), pasant el parametre -nw
 
 * L'execució tant dels clients, com dels servidors, amb el parámetre --help, mostra un llistat de diferents modificadors que influiran sobre el comportament dels servidors/clients, hi ha diferencies entre les dues implementacions.
+
+
+* Ah, i també quedaria molt cool, fotreli un gráfic amb una máquina d'estats amb els estats amb els que es pot trobar el client, i fotre els diferents missatges que fan que el client canvia d'estat.
+
+
+
