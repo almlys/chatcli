@@ -53,7 +53,7 @@
 using namespace std;
 
 
-#ifdef KK
+#ifdef FIXME
 /// Send message with udp
 int sendudp(char * buf, char * msg, int sockudp, string user) {
 	int len;
