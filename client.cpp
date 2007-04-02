@@ -469,7 +469,7 @@ void client::installSignalHandlers() {
 /// Show server usage information
 /// @param pgname Program name
 void usage(char * pgname) {
-	printf("Usage: %s [-p 8642] [-b 10] [-D]\n\
+	printf("Usage: %s [-p 0]\n\
  -p <port>: Select the listening udp port (default 0)\n\
 \n",pgname);
 }
