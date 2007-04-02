@@ -40,6 +40,7 @@
 #include <exception>
 
 #include <errno.h>
+#include <netdb.h>
 
 #include "protocol.h"
 
@@ -75,6 +76,22 @@ const char * errorException::what() const throw() {
 	errortext += strerror(_errno);
 	return errortext.c_str();
 }
+
+herrorException::herrorException(const char * in) {
+	_errno=h_errno;
+	_in=in;
+}
+
+const char * herrorException::what() const throw() {
+	std::string errortext;
+	char buf[100];
+	sprintf(buf,"%s: %i",_in,_errno);
+	errortext = buf;
+	errortext += " ";
+	errortext += hstrerror(_errno);
+	return errortext.c_str();
+}
+
 
 protocolViolation::protocolViolation(const char * in) {
 	_in=in;

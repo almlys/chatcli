@@ -76,7 +76,21 @@ private:
 public:
 	/// Constructor
 	/// @param in Some text (eg, function name)
-	errorException(const char * in);
+	errorException(const char * in="");
+	/// Returns a pointer to a char buffer with some info about what the hell is going on
+	/// @return Error descritive text
+	virtual const char * what() const throw();
+};
+
+/// Encapsulate errors into this exception
+class herrorException: public errorException {
+private:
+	int _errno;
+	const char * _in;
+public:
+	/// Constructor
+	/// @param in Some text (eg, function name)
+	herrorException(const char * in);
 	/// Returns a pointer to a char buffer with some info about what the hell is going on
 	/// @return Error descritive text
 	virtual const char * what() const throw();

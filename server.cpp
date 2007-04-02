@@ -52,6 +52,8 @@
 
 using namespace std;
 
+bool _debug=true;
+
 server::server(const string lhost,const U16 lport,const Byte backlog) {
 	_keep_running = true;
 	setBindAddress(lhost,lport);

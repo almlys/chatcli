@@ -52,128 +52,7 @@
 
 using namespace std;
 
-
-#ifdef FIXME
-/// Send message with udp
-int sendudp(char * buf, char * msg, int sockudp, string user) {
-	int len;
-	len=strlen(buf)-1;
-	while (buf[len]=='\n' || buf[len]=='\r') {
-		buf[len--]='\0';
-	}
-	string req=buf;
-	string cmd;
-	string data;
-	string::size_type pos;
-	pos=req.find(" ", 0);
-	if(pos==std::string::npos) {
-		cmd=req;
-	} else {
-		cmd=req.substr(0,pos);
-		data=req.substr(pos+1);
-	}
-	//cout<<"Processing request, command: "<<cmd<<",data: "<<data<<endl;
-	string ip, port;
-	
-	if(cmd=="500") { //Identificacio
-		//cout<<"Intentat enviar missatge privat..."<<endl;
-		if (data!="null") {
-			pos=data.rfind(" ");
-			ip=data.substr(0,pos);
-			port=data.substr(pos+1);
-			struct sockaddr_in their_addr_udp; /* almacenara la direccion IP y numero de puerto del servidor */
-			struct hostent *he_udp; /* para obtener nombre del host */
-			int numbytes; /* conteo de bytes a escribir */
-			/* convertimos el hostname a su direccion IP */
-			if ((he_udp=gethostbyname(ip.c_str())) == NULL) {
-				herror("gethostbyname");
-				exit(1);
-			}
-		
-			/* a donde mandar */
-			std::istringstream i(port);
-   			int p;
-			i >> p;
-			their_addr_udp.sin_family = AF_INET; /* usa host byte order */
-			their_addr_udp.sin_port = htons(p); /* usa network byte order */
-			their_addr_udp.sin_addr = *((struct in_addr *)he_udp->h_addr);
-			bzero(&(their_addr_udp.sin_zero), 8); /* pone en cero el resto */
-		
-			/* enviamos el mensaje */
-			string message=msg;
-			string buf=protocol::pm;
-			buf+=" "+user+" says: "+message+protocol::sep;
-			if ((numbytes=sendto(sockudp,buf.c_str(),strlen(buf.c_str()),0,(struct sockaddr *)&their_addr_udp, sizeof(struct sockaddr))) == -1) {
-				perror("sendto");
-				exit(1);
-			}
-			writePrompt();
-			//cout<<"Missatge enviat correctament."<<endl;
-		} else {
-			cout<<"No s'ha pogut enviar el privat. El client no existeix."<<endl;
-			writePrompt();
-		}
-	}
-
-	return 0;
-}
-
-/// Process recived data of the server
-unsigned char prodataserver(int sock, char * buf) {
-	int len;
-	len=strlen(buf)-1;
-	while (buf[len]=='\n' || buf[len]=='\r') {
-		buf[len--]='\0';
-	}
-	//printf("Processing request: %s<-\n",buf);
-	string req=buf, out;
-	string str1;
-	string str2;
-	string::size_type pos;
-	pos=req.find(" ", 0);
-	if(pos==std::string::npos) {
-		str1=req;
-	} else {
-		str1=req.substr(0,pos);
-		str2=req.substr(pos+1);
-	}
-	//cout<<"Rebut del servidor, command: "<<str1<<", data: "<<str2<<endl;
-	if(str1==protocol::ok){
-		;
-	} else if (str1==protocol::error){
-		cout<<"ERROR"<<endl;
-		out=protocol::exit;
-		out+=protocol::sep;
-		sendmsg(sock,out.c_str());
-		return 0;
-	}else if (str1==protocol::pm){
-		cout<<str2<<endl;
-	}else if (str1==protocol::bcast){
-		cout<<endl<<str2<<endl;
-	}else {
-		cout<<"ERROR"<<endl;
-	}
-	writePrompt();
-	return 1;
-}
-
-int main2(int argc, char *argv[]) {
-///
-	receivemsg(sockfd,buf);
-	if(!strncmp(buf,"200",3)){
-		cout<<"ERROR Identificacio"<<endl;
-	}
-
-	out=protocol::register2;
-	out+=" "+user+" "+port+" "+protocol::sep;
-	sendmsg(sockfd, out.c_str());
-	receivemsg(sockfd,buf);
-	if(!strncmp(buf,"200",3)){
-		cout<<"ERROR Registre"<<endl;
-	}
-	cout<<"Conexion, identificacion y registro, serv: "<<ips<<", usuario: "<<user<<endl;
-}
-#endif
+bool _debug=false;
 
 client::client(const string login,const string server_addr,U16 server_port,const string lhost,U16 lport) {
 	_nick = login;
@@ -181,6 +60,8 @@ client::client(const string login,const string server_addr,U16 server_port,const
 	_server_port=server_port;
 	_bindAddr=lhost;
 	_bindPort=lport;
+	_keep_running=true;
+	_state=kNew;
 }
 
 void client::startOp() {
@@ -221,7 +102,7 @@ void client::connect2() {
 	struct sockaddr_in their_addr; // connector's address information 
 
 	if ((he=gethostbyname(_server_addr.c_str())) == NULL) {  // get the host info 
-		throw errorException("gethostbyname");
+		throw herrorException("gethostbyname");
 	}
 
 	if ((_sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
@@ -261,11 +142,21 @@ void client::sendall(const char * msg) {
 void client::sendCmd(const string cmd) {
 	string out=cmd;
 	out+=protocol::sep;
+	sendall(out.c_str());
 }
 
 void client::sendHello() {
 	_command_stack.push(protocol::ok);
 	sendCmd(protocol::helo);
+}
+
+void client::setNick(const string nick) {
+	_command_stack.push(protocol::ok);
+	string out=protocol::register2;
+	std::ostringstream o;
+	if(!(o << _udpport)) throw protocolViolation("Cannot convert port from unsigned short int to a string");
+	out+=" "+nick+" "+o.str();
+	sendCmd(out);
 }
 
 void client::requestLoop() {
@@ -334,8 +225,9 @@ void client::requestLoop() {
 			string token=protocol::pm;
 			token+=" ";
 			pos=udpmsg.find(token);
-			if(pos!=string::npos) {
-				udpmsg=udpmsg.substr(pos+1);
+			//cout<<endl<<"Msg: "<<udpmsg<<endl;
+			if(pos!=string::npos && pos==0) {
+				udpmsg=udpmsg.substr(token.size());
 				token=" \t";
 				token+=protocol::sep;
 				pos = udpmsg.find_first_not_of(token);
@@ -346,6 +238,7 @@ void client::requestLoop() {
 				cout<<udpmsg<<endl;
 				writePrompt();
 			}
+			//cout<<pos<<endl;
 		}
 	}
 }
@@ -378,7 +271,6 @@ void client::help(void) {
 void client::processUserInput(const string req) {
 //unsigned char processdata(int sock, char * buf,int sockudp, string user)
 	//printf("Processing request: %s<-\n",req.c_str());
-	string out;
 	string str1;
 	string str2;
 	string::size_type pos;
@@ -398,6 +290,7 @@ void client::processUserInput(const string req) {
 
 	if(str2=="") {
 		if(str1=="") {
+			//cout<<"Noop"<<endl;
 			//Noop
 		} else if(str1=="ayuda") {
 			help();
@@ -413,12 +306,88 @@ void client::processUserInput(const string req) {
 		} else {
 			//cout<<"Enviamos el privado..."<<endl;
 			sendp2pMsg(str1,str2);
+			//cout<<"sending p2p msg"<<endl;
 		}
 	} else {
 		cout<<"Error, Cannot send a message, because the client is still not registered"<<endl;
 	}
 	writePrompt();
 }
+
+void client::proccessServerResponse(const string req) {
+	//printf("Processing request: %s<-\n",req.c_str());
+	string cmd;
+	string str1;
+	string str2;
+	string::size_type pos;
+	pos=req.find(" ", 0);
+	if(pos==std::string::npos) {
+		str1=req;
+	} else {
+		str1=req.substr(0,pos);
+		str2=req.substr(pos+1);
+	}
+	//cout<<"Rebut del servidor, command: "<<str1<<", data: "<<str2<<endl;
+	try {
+		if(str1==protocol::ok) {
+			if (_command_stack.empty()) throw protocolViolation("Got ok, when it was not expected!");
+			cmd=_command_stack.front();
+			_command_stack.pop();
+			if (cmd!=protocol::ok) throw protocolViolation("Unexpected response from server (ok was expected)");
+			if (_state==kNew) {
+				_state=kIdent;
+				setNick(_nick);
+			} else if (_state==kIdent) {
+				_state=kRegister;
+				cout<<"Conexion, identificacion y registro, serv: "<<_server_addr<<", usuario: "<<_nick<<endl;
+				writePrompt();
+			}
+		} else if (str1==protocol::error) {
+			if (_state==kNew) cout<<endl<<"ERROR Identificacio"<<endl;
+			else if (_state==kIdent) cout<<endl<<"ERROR Registre, nick already in use, please use a different one!";
+			else cout<<endl<<"ERROR"<<endl;
+			throw protocolViolation("Server said error");
+		//} else if (str1==protocol::pm) {
+		//	cout<<str2<<endl;
+		} else if (str1==protocol::bcast) {
+			cout<<endl<<str2<<endl;
+			writePrompt();
+		} else if (str1==protocol::answer) {
+			if (_pm_stack.empty() || _command_stack.empty()) throw protocolViolation("Got answer when it was not expected");
+			cmd=_command_stack.front();
+			_command_stack.pop();
+			if (cmd!=protocol::answer) throw protocolViolation("Unexpected response from server (answer was expected)");
+			if (str2!="null") {
+				string ip,port,msg;
+				msg=_pm_stack.front();
+				_pm_stack.pop();
+				pos=str2.rfind(" ");
+				if(pos==string::npos) throw protocolViolation("Syntax error in server response");
+				ip=str2.substr(0,pos);
+				port=str2.substr(pos+1);
+				std::istringstream i(port);
+				U16 p;
+				if (!(i >> p) || p==0) throw protocolViolation("Invalid port recieved from server");
+				sendp2pMsg2peer(ip,p,msg);
+			} else {
+				cout<<endl<<"No s'ha pogut enviar el privat. El client no existeix."<<endl;
+				writePrompt();
+			}
+		} else {
+			cout<<endl<<"ERROR"<<endl;
+			throw protocolViolation("Unknown command recieved from server");
+		}
+	} catch(protocolViolation & e) {
+		cout<<endl;
+		cout<<"ProtocolViolation "<<e.what()<<endl;
+		usershutdown();
+	} catch(errorException & e) {
+		cout<<endl;
+		cout<<"Error sending message: "<<e.what()<<endl;
+		writePrompt();
+	}
+}
+
 
 void client::sendBcastMsg(const string msg) {
 	_command_stack.push(protocol::ok);
@@ -433,6 +402,33 @@ void client::sendp2pMsg(const string nick,const string msg) {
 	out+=" "+nick;
 	sendCmd(out);
 	_pm_stack.push(msg);
+}
+
+/// Send message with udp
+void client::sendp2pMsg2peer(const string ip,U16 p,const string msg) {
+	struct sockaddr_in their_addr_udp; /* almacenara la direccion IP y numero de puerto del cliente */
+	struct hostent *he_udp; /* para obtener nombre del host */
+	int numbytes; /* conteo de bytes a escribir */
+
+	/* convertimos el hostname a su direccion IP */
+	if ((he_udp=gethostbyname(ip.c_str())) == NULL) {
+		throw herrorException("gethostbyname");
+	}
+
+	/* a donde mandar */
+	their_addr_udp.sin_family = AF_INET; /* usa host byte order */
+	their_addr_udp.sin_port = htons(p); /* usa network byte order */
+	their_addr_udp.sin_addr = *((struct in_addr *)he_udp->h_addr);
+	bzero(&(their_addr_udp.sin_zero), 8); /* pone en cero el resto */
+		
+	/* enviamos el mensaje */
+	string buf=protocol::pm;
+	buf+=" "+_nick+" says: "+msg+protocol::sep;
+	if ((numbytes=sendto(_sockudp,buf.c_str(),strlen(buf.c_str()),0,(struct sockaddr *)&their_addr_udp, sizeof(struct sockaddr))) == -1) {
+		throw errorException("sendto");
+	}
+	//NOOOR writePrompt();
+	//cout<<"Missatge enviat correctament."<<endl;
 }
 
 void client::writePrompt(){

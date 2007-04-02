@@ -82,6 +82,10 @@ public:
 	/// Runs the Main aplication loop
 	void run();
 
+	/// Sets the nick
+	/// @param nick The nick to set
+	void setNick(const std::string nick);
+
 	/// Sends all data throught the TCP socket
 	/// @param msg Message to send
 	void sendall(const char * msg);
@@ -103,11 +107,24 @@ public:
 	/// @param req User data to be processed
 	void processUserInput(const std::string req);
 
+	/// Process recived data of the server
+	/// @param req The request recieved from server
+	void proccessServerResponse(const std::string req);
+
 	/// Sends a broadcast message
+	/// @param msg The message to send
 	void sendBcastMsg(const std::string msg);
 
 	/// Sends a private message by p2p
+	/// @param nick Destination Username
+	/// @param msg The message
 	void sendp2pMsg(const std::string nick, const std::string msg);
+
+	/// Sends a p2p message
+	/// @param ip Destination ip address
+	/// @param p Destination port
+	/// @param msg The message
+	void sendp2pMsg2peer(const std::string ip,U16 p,const std::string msg);
 
 	/// Show client prompt
 	void writePrompt();

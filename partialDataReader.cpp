@@ -41,7 +41,7 @@
 
 using namespace std;
 
-bool _debug=true;
+extern bool _debug;
 
 PartialDataReader::PartialDataReader(bool emptycmds) {
 	_sep_state=0;

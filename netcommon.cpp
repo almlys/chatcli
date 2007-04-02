@@ -42,6 +42,8 @@
 #include "protocol.h"
 #include "netcommon.h"
 
+extern bool _debug;
+
 selectInterface::selectInterface() {
 	FD_ZERO(&_readfs);
 	FD_ZERO(&_master);
@@ -49,7 +51,7 @@ selectInterface::selectInterface() {
 }
 
 void selectInterface::register2(int fdesc) {
-	printf("registe: %i\n",fdesc);
+	if(_debug) printf("registe: %i\n",fdesc);
 	FD_SET(fdesc,&_master);
 	_fdmax = fdesc>_fdmax ? fdesc : _fdmax;
 }

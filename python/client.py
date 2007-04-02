@@ -267,7 +267,7 @@ class client(object):
                 elif self.state==ClientStatus.ident:
                     self.state=ClientStatus.register
             elif cmd==protocol.answer:
-                if len(self.pm_stack)==0:
+                if len(self.pm_stack)==0 or len(self.command_stack)==0:
                     print ""
                     print "Got answer, when it was not expected!"
                     raise ProtocolViolation,"Answer not exepected"
@@ -290,6 +290,8 @@ class client(object):
                 print ""
                 print data
                 self.writePrompt()
+            else:
+                raise ProtocolViolation,"Unknown command recieved from server"
                     
         except ProtocolViolation,e:
             print ""
