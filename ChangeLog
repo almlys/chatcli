@@ -1,3 +1,53 @@
+2007-04-02 12:04  alberto
+
+	* client.cpp, client2.cpp, client_old.cpp: merged
+
+2007-04-02 12:03  alberto
+
+	* client.h, client2.cpp, netcommon.cpp, partialDataReader.cpp,
+	  protocol.cpp, protocol.h, python/client.py, server.cpp: Finished
+
+2007-04-02 10:02  josep
+
+	* client.cpp:
+
+2007-04-02 00:32  alberto
+
+	* TODO, python/TODO: kkk
+
+2007-04-02 00:28  alberto
+
+	* client2.cpp: aiii
+
+2007-04-02 00:26  alberto
+
+	* client.h, client2.cpp: not yet finished
+
+2007-04-01 19:01  josep
+
+	* client.cpp:
+
+2007-04-01 12:29  josep
+
+	* client.cpp:
+
+2007-04-01 11:46  alberto
+
+	* client.cpp: xxx
+
+2007-04-01 11:38  josep
+
+	* client.cpp:
+
+2007-04-01 10:27  josep
+
+	* client.cpp:
+
+2007-04-01 09:56  alberto
+
+	* ChangeLog, cserver.c, cserver.cpp, cserver_old.c,
+	  server-incompleto.c: cleanup old files
+
 2007-04-01 09:54  alberto
 
 	* TODO, server.cpp, sessionMGR.cpp: Server cleanup fixed

@@ -1,5 +1,5 @@
 /******************************************************************************
-* $Revision$                                                            *
+* $Revision: 228 $                                                            *
 *                                                                             *
 *    Copyright (C) 2007 Ignasi Barri Vilardell                                *
 *    Copyright (C) 2007 Alberto Montañola Lacort                              *
@@ -530,7 +530,6 @@ int main(int argc, char * argv[]) {
 	if(parse_argv(&config,argc,argv)) { return -1; }
 
 	string user, ips;
-	int n=0;
 	while (config.login=="" && !cin.eof()) {
 		cout<<"cliente > "<<"Esperando un identificador de usuario: ";
 		//cin>>user; No m'agrada el comportament que té
