@@ -1,0 +1,15 @@
+Algunes notes:
+
+* Comentar que presentem la nostra práctica en 2 llenguatges (python i C++)
+
+* Sobre el disseny, explicarlo un rotllo que soni ben bonic de pq hem dissenyat una serie de tasques per a fer les diferent tasques requerides per la práctica, i com el disseny i implementació de totes dues versions Python vs C++ són gairebé identics.
+
+* Comentar de forma cool, que va molt be fer prototips en python abans d'implementar les versions finals amb C++, i que es el camí que hem seguit a l'elaborar aquesta práctica.
+
+* comentar el tema del separador, rotllo de que fem anar el \r\n, pq es el que s'utilitza de forma estándar a tots els protocols que intercanvien text en pla com el del nostre. Dirli també que la nostra solució es flexible, i suporta rebudes de dades amb separados de tot tipus \n, \r, i \r\n.
+
+* Comentar que el servidors, admeten una série de parametres per línia de comandes, que poden variar de forma lleugera el seu comportament.
+
+* Comentar també, que el nostre disseny suporta nicks amb Espais, pero que es poden desactivar (només a la versió Python), pasant el parametre -nw
+
+* L'execució tant dels clients, com dels servidors, amb el parámetre --help, mostra un llistat de diferents modificadors que influiran sobre el comportament dels servidors/clients, hi ha diferencies entre les dues implementacions.
