@@ -357,7 +357,7 @@ void client::proccessServerResponse(const string req) {
 			cmd=_command_stack.front();
 			_command_stack.pop();
 			if (cmd!=protocol::answer) throw protocolViolation("Unexpected response from server (answer was expected)");
-			if (str2!="null") {
+			if (str2.substr(0,4)!="null") {
 				string ip,port,msg;
 				msg=_pm_stack.front();
 				_pm_stack.pop();
@@ -516,7 +516,7 @@ char parse_argv(struct mconfig * config, int argc, char * argv[]) {
 /// @param config Address of the Configuration struct
 void set_config_defaults(struct mconfig * config) {
 	//Don't do this ->memset(config,0,sizeof(struct mconfig));
-	config->port=0;
+	config->port=-1;
 	config->login="";
 	config->server_addr="";
 	config->server_port=8642;
@@ -529,7 +529,8 @@ int main(int argc, char * argv[]) {
 	set_config_defaults(&config);
 	if(parse_argv(&config,argc,argv)) { return -1; }
 
-	string user, ips;
+	//string user, ips;
+	string port;
 	while (config.login=="" && !cin.eof()) {
 		cout<<"cliente > "<<"Esperando un identificador de usuario: ";
 		//cin>>user; No m'agrada el comportament que té
@@ -540,6 +541,15 @@ int main(int argc, char * argv[]) {
 		//cin>>ips; 3/4 de lo mismo
 		getline(cin,config.server_addr);
 	}
+	while(config.port==-1 && !cin.eof()) {
+ 		cout<<"cliente > "<<"esperando puerto UDP para recepcion mensajes privados: ";
+		getline(cin,port);
+		int aux_port=atoi(port.c_str());
+		if(port!="" && aux_port>=0 && aux_port<=0xFFFF) {
+			config.port=aux_port;
+		}
+	}
+
 	if(cin.eof()) return -1; //El usuario cerro la entrada estandar
 
 	try {

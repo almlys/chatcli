@@ -232,5 +232,6 @@ class sessionMGR(object):
             return self.nicks[name].addr[0] + " " + str(self.nicks[name].port)
         else:
             #raise NickNotFound
-            return "null"
+            # Revision 2.1 of the protocol adds the udp port, and must be 0 if the client does not exist
+            return "null 0"
 

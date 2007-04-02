@@ -243,7 +243,7 @@ std::string & sessionMGR::findAddress(const char * nick) {
 		if (!(o << _nicks[nick]->getUdpPort())) throw protocolViolation("Error converting an unsigned int to a string");
 		_tmp_msg+=o.str();
 	} else {
-		_tmp_msg="null";
+		_tmp_msg="null 0";
 	}
 	return _tmp_msg;
 }

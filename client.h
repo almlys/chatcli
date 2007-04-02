@@ -141,7 +141,7 @@ public:
 
 /// Configuration struct
 struct mconfig {
-	U16 port;
+	int port;
 	std::string login;
 	std::string server_addr;
 	U16 server_port;

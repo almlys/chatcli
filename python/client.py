@@ -276,7 +276,7 @@ class client(object):
                     print ""
                     print "Expected response was %s, but got %s" %(op,protocol.ok)
                     raise ProtocolViolation,"Unexpected response from server"
-                if data=="null":
+                if data.startswith("null"):
                     print ""
                     print "Nick not found"
                     self.writePrompt()
@@ -384,7 +384,7 @@ def parse_args():
     """
     Parses some command line arguments
     """
-    config={"port" : 0, "buf" : 4096, "bind" : "", "login" : "",
+    config={"port" : None, "buf" : 4096, "bind" : "", "login" : "",
             "server_port" : 8642, "server_addr" : "" }
     import sys
     n=len(sys.argv)
@@ -443,6 +443,11 @@ def main():
                 config["login"]=raw_input("cliente> esperando un identificador de usuario: ")
             while config["server_addr"]=="":
                 config["server_addr"]=raw_input("cliente> esperando la dirección de un servidor: ")
+            while config["port"]==None:
+                try:
+                    config["port"]=int(raw_input("cliente> esperando puerto UDP para recepcion mensajes privados: "))
+                except ValueError:
+                    pass
         except EOFError:
             import sys
             sys.exit(0)            
