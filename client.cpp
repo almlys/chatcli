@@ -244,6 +244,7 @@ unsigned char prodataserver(int sock, char * buf) {
 		cout<<endl<<str2<<endl;
 	}else {
 		cout<<"ERROR"<<endl;
+		return 0;
 	}
 	writePrompt();
 	return 1;
