@@ -8,11 +8,8 @@
 
 ** client **
 ============
-* Acabo d'enganxar el UDP a sako.... ja se k es una puta porkeria xo abasn d'arreglaro vull parlar amb tu!!! konektat al amsn home xDD
-* Refer la porqueria actual, a algo més bonic, similar a la conversió server.c <-> xserver.cpp, seguint com a guia la implementació feta amb Python
-* Inicialitzacio
-* Implementar el protocol
-* Conexions UDP (p2p) amb els clients
+* Acabar de transformar les dos funcions que falten a C++
+* Beta testing, intentar petar-lo i destroçar-lo, comprobar lo que aguanta...
 * Polirlo
 * GUI ;)
 
