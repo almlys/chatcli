@@ -17,5 +17,15 @@ Algunes notes:
 
 * Ah, i també quedaria molt cool, fotreli un gráfic amb una máquina d'estats amb els estats amb els que es pot trobar el client, i fotre els diferents missatges que fan que el client canvia d'estat.
 
+        HOLA               300 (register)            800 (quit)
+                                                     200 (error)
+ New  --------->   Ident     ---------->   Register  -------> End
+                                              ^  |
+                                              |  |
+                                              `--'
+                                              300 (register)
+                                              400/500 (query/answer)
+                                              600 (pm)
+                                              700 (bcast)
 
 
