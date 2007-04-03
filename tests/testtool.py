@@ -57,7 +57,7 @@ def parse_args():
     config={ "client_bin" : "../client", "server_port" : 8642, "server_addr" : "" }
     import sys
     n=len(sys.argv)
-    i=1
+    i=6
     while i<n:
         arg=sys.argv[i]
         if arg=="-h" or arg=="--help":
@@ -87,12 +87,17 @@ def parse_args():
 class test_suite(object):
 
     def __init__(self,config):
+	import sys
         self.config=config
         # Now i can cheat :)
         self.select=select.poll()
-        self.keep_running=True
+        self.keep_running=int(sys.argv[4])
 
     def do_test(self):
+	import sys
+	usr2=sys.argv[1]+"\n"
+    	ip2=sys.argv[2]+"\n"
+    	port2=sys.argv[3]+"\n"
         baby = popen2.Popen4(self.config["client_bin"])
         self.select.register(baby.fromchild,select.POLLIN)
         args = fcntl.fcntl(baby.fromchild,fcntl.F_GETFL)
@@ -106,37 +111,39 @@ class test_suite(object):
         
         imsg = baby.fromchild.read()
         print "client: %s" % (imsg,)
-        baby.tochild.write("me\n")
+        baby.tochild.write(usr2)
         baby.tochild.flush()
         sleep(1)
 
         imsg = baby.fromchild.read()
         print "client: %s" % (imsg,)
-        baby.tochild.write("172.26.0.19\n")
+        baby.tochild.write(ip2)
         baby.tochild.flush()
         sleep(1)
 
 
         imsg = baby.fromchild.read()
         print "client: %s" % (imsg,)
-        baby.tochild.write("5000\n")
+        baby.tochild.write(port2)
         baby.tochild.flush()
         sleep(1)
 
-        while self.keep_running:
-            sleep(1)
+        while self.keep_running>0:
+            sleep(0.5)
+	    aux=self.keep_running
+            imsg = baby.fromchild.read()
+            print "client: %s" % (imsg,)
+            baby.tochild.write("todos: "+str(aux)+" -- Spam!!\n")
+            baby.tochild.flush()
+
+            sleep(0.5)
 
             imsg = baby.fromchild.read()
             print "client: %s" % (imsg,)
-            baby.tochild.write("todos: Spam!!\n")
+            baby.tochild.write("todos: "+str(aux)+" -- Eggs!!\n")
             baby.tochild.flush()
 
-            sleep(1)
-
-            imsg = baby.fromchild.read()
-            print "client: %s" % (imsg,)
-            baby.tochild.write("todos: Eggs!!\n")
-            baby.tochild.flush()
+	    self.keep_running-=1
 
 ##        while self.keep_running:
 ##            print "hay"
