@@ -126,7 +126,7 @@ class test_suite(object):
         print "client: %s" % (imsg,)
         baby.tochild.write(port2)
         baby.tochild.flush()
-        sleep(1)
+        sleep(20)
 
         while self.keep_running>0:
             sleep(0.5)
@@ -144,6 +144,12 @@ class test_suite(object):
             baby.tochild.flush()
 
 	    self.keep_running-=1
+	
+	sleep(20)
+	imsg = baby.fromchild.read()
+        print "client: %s" % (imsg,)
+        baby.tochild.write("salir\n")
+        baby.tochild.flush()
 
 ##        while self.keep_running:
 ##            print "hay"
