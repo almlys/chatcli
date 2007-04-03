@@ -1,5 +1,5 @@
 /******************************************************************************
-* $Revision: 228 $                                                            *
+* $Revision$                                                            *
 *                                                                             *
 *    Copyright (C) 2007 Ignasi Barri Vilardell                                *
 *    Copyright (C) 2007 Alberto Montañola Lacort                              *
@@ -290,8 +290,7 @@ void client::processUserInput(const string req) {
 
 	if(str2=="") {
 		if(str1=="") {
-			//cout<<"Noop"<<endl;
-			//Noop
+
 		} else if(str1=="ayuda") {
 			help();
 		} else if(str1=="salir"){
@@ -427,7 +426,6 @@ void client::sendp2pMsg2peer(const string ip,U16 p,const string msg) {
 	if ((numbytes=sendto(_sockudp,buf.c_str(),strlen(buf.c_str()),0,(struct sockaddr *)&their_addr_udp, sizeof(struct sockaddr))) == -1) {
 		throw errorException("sendto");
 	}
-	//NOOOR writePrompt();
 	//cout<<"Missatge enviat correctament."<<endl;
 }
 
@@ -533,16 +531,14 @@ int main(int argc, char * argv[]) {
 	string port;
 	while (config.login=="" && !cin.eof()) {
 		cout<<"cliente > "<<"Esperando un identificador de usuario: ";
-		//cin>>user; No m'agrada el comportament que té
 		getline(cin,config.login);
 	}
 	while(config.server_addr=="" && !cin.eof()) {
 		cout<<"cliente > "<<"Esperando la direccion de un servidor: ";
-		//cin>>ips; 3/4 de lo mismo
 		getline(cin,config.server_addr);
 	}
 	while(config.port==-1 && !cin.eof()) {
- 		cout<<"cliente > "<<"esperando puerto UDP para recepcion mensajes privados: ";
+ 		cout<<"cliente > "<<"esperando puerto UDP para recepcion mensajes privados (0 para que lo asigne el sistema): ";
 		getline(cin,port);
 		int aux_port=atoi(port.c_str());
 		if(port!="" && aux_port>=0 && aux_port<=0xFFFF) {
