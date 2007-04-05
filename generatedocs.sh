@@ -1,5 +1,6 @@
 #!/bin/sh
 
+currentdir=`pwd`
 outdir="fake_out"
 rm -rf $outdir
 
@@ -57,3 +58,7 @@ pdflatex refman.tex
 pdflatex refman.tex
 pdflatex refman.tex
 pdflatex refman.tex
+
+cd $currentdir
+mv $outdir/docs .
+rm -rf $outdir
