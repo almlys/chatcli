@@ -211,7 +211,7 @@ void client::requestLoop() {
 				reql.pop();
 			}
 		} else if(client==_sockudp) {
-			/* Se reciben los datos (directamente, UDP no necesita conexi�) */
+			/* Se reciben los datos (directamente, UDP no necesita conexion) */
 			struct sockaddr_in their_addr;
 			socklen_t addr_len = sizeof(struct sockaddr_in);
 			//printf("Esperando datos ....\n");
